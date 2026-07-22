@@ -323,3 +323,40 @@ para o Supabase Storage, **sem fluxo de aprovação/rejeição implementado**:
   (`Document.status: VerificationStatus`, `reviewedAt: DateTime?`) já 
   suporta isso — só falta o painel/rota que faz a análise, que não existe 
   ainda porque não há papel de `ADMIN` operacional no app hoje.
+
+## Identidade do site
+
+Nome: **Trevo**. Tagline: **"Cuidado que conecta"**. Esses dois valores 
+vivem centralizados em `lib/site-config.ts` (`siteConfig.name` / 
+`siteConfig.tagline`) — nunca hardcoded direto numa página. Hoje são usados 
+em `app/layout.tsx` (título/descrição da página) e `app/page.tsx` (hero e 
+rodapé); qualquer lugar novo que precisar do nome/tagline do site (emails 
+transacionais, outras páginas de marketing) deve importar dali, não repetir 
+a string.
+
+**Home page (`app/page.tsx`)**: pública, mas usuário já logado é 
+redirecionado automaticamente pro dashboard do seu `role` (`getServerSession` 
++ `redirect`, sem passar pelo `middleware.ts` — o matcher dele não cobre `/`). 
+Estrutura, de cima para baixo:
+- **Hero**: nome + tagline + frase curta de proposta + os dois CTAs lado a 
+  lado (`/cadastro/familia` e `/cadastro/cuidador`), com **hierarquia visual 
+  idêntica** entre os dois (mesmo estilo/cor/tamanho) — nenhum é "mais 
+  importante" que o outro.
+- **Como funciona**: 3 passos com ícone (`lucide-react`), conectados 
+  visualmente pelo mesmo `ConnectionLine` já usado em `/buscar` e 
+  `/match-recomendado` (reforça a metáfora de "conexão" da tagline). O 
+  componente continua fisicamente em 
+  `app/dashboard/familia/_components/connection-line.tsx` — a home importa 
+  de lá em vez de mover o arquivo, pra não mexer nos imports das outras 
+  páginas que já o usam.
+- **Por que confiar**: 3 pontos (senha criptografada, documentos verificados, 
+  avaliações reais).
+- **CTA final**: repete os dois botões do hero antes do rodapé.
+- **Rodapé**: nome do site + ano calculado via `new Date().getFullYear()` 
+  (nunca um ano fixo).
+
+Dois novos tokens em `lib/ui.ts` pra isso: `heroButtonClass` (CTA grande, 
+full-width no mobile / lado a lado em telas maiores — `primaryButtonClass` 
+já existente é dimensionado pra botão de formulário, pequeno demais pra 
+hero) e `contentCardClass` (card de conteúdo genérico pra grid, mesma 
+linguagem visual do `cardClass` mas sem a largura máxima fixa).

@@ -1,65 +1,164 @@
-import Image from "next/image";
+import { FileCheck, Lock, ShieldCheck, Star, UserPlus, Users } from "lucide-react";
+import { Role } from "@prisma/client";
+import { getServerSession } from "next-auth/next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+import { ConnectionLine } from "@/app/dashboard/familia/_components/connection-line";
+import { authOptions } from "@/lib/auth";
+import { siteConfig } from "@/lib/site-config";
+import { contentCardClass, heroButtonClass } from "@/lib/ui";
+
+const STEPS = [
+  {
+    icon: UserPlus,
+    title: "Crie seu perfil",
+    description: "Família ou cuidador, o cadastro leva poucos minutos.",
+  },
+  {
+    icon: Users,
+    title: "Encontre o match ideal",
+    description:
+      "Buscamos por proximidade, tipo de cuidado, avaliação e preço.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Contrate com segurança",
+    description: "Combine os detalhes e acompanhe tudo pelo próprio Trevo.",
+  },
+];
+
+const TRUST_POINTS = [
+  {
+    icon: Lock,
+    title: "Dados protegidos",
+    description: "Senhas armazenadas com criptografia, nunca em texto puro.",
+  },
+  {
+    icon: FileCheck,
+    title: "Documentos verificados",
+    description: "Cuidadores enviam documentos para análise antes de atender.",
+  },
+  {
+    icon: Star,
+    title: "Avaliações reais",
+    description: "Famílias avaliam cuidadores após cada contratação concluída.",
+  },
+];
+
+function HeroCtas() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="mx-auto mt-8 flex max-w-md flex-col gap-4 sm:max-w-none sm:flex-row sm:justify-center">
+      <Link href="/cadastro/familia" className={heroButtonClass}>
+        Sou família, buscar cuidador
+      </Link>
+      <Link href="/cadastro/cuidador" className={heroButtonClass}>
+        Sou cuidador, quero atender
+      </Link>
     </div>
+  );
+}
+
+export default async function HomePage() {
+  const session = await getServerSession(authOptions);
+
+  if (session?.user?.role === Role.FAMILY) {
+    redirect("/dashboard/familia");
+  }
+
+  if (session?.user?.role === Role.CAREGIVER) {
+    redirect("/dashboard/cuidador");
+  }
+
+  return (
+    <main className="flex-1">
+      {/* HERO */}
+      <section className="px-4 py-20 text-center sm:py-28">
+        <h1 className="font-display text-5xl font-bold text-ink sm:text-6xl">
+          {siteConfig.name}
+        </h1>
+        <p className="mt-3 font-display text-xl font-semibold text-primary sm:text-2xl">
+          {siteConfig.tagline}
+        </p>
+        <p className="mx-auto mt-6 max-w-xl text-base text-muted sm:text-lg">
+          Um marketplace para encontrar cuidadores de confiança para idosos,
+          crianças e pessoas com necessidades especiais — e para cuidadores
+          encontrarem famílias que precisam deles.
+        </p>
+        <HeroCtas />
+      </section>
+
+      {/* COMO FUNCIONA */}
+      <section className="bg-white px-4 py-16 sm:py-20">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="text-center font-display text-3xl font-semibold text-ink">
+            Como funciona
+          </h2>
+          <div className="mt-12 flex flex-col items-center gap-6 sm:flex-row sm:items-stretch sm:justify-center sm:gap-2">
+            {STEPS.map((step, index) => (
+              <div key={step.title} className="flex items-center sm:contents">
+                <div
+                  className={`${contentCardClass} flex w-full max-w-xs flex-col items-center gap-3 text-center sm:w-60`}
+                >
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-light text-primary">
+                    <step.icon aria-hidden="true" className="h-7 w-7" />
+                  </span>
+                  <h3 className="font-display text-lg font-semibold text-ink">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-muted">{step.description}</p>
+                </div>
+                {index < STEPS.length - 1 && (
+                  <div className="hidden shrink-0 self-center px-1 sm:block">
+                    <ConnectionLine matchScore={0.8} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* POR QUE CONFIAR */}
+      <section className="px-4 py-16 sm:py-20">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="text-center font-display text-3xl font-semibold text-ink">
+            Por que confiar
+          </h2>
+          <div className="mt-12 grid gap-6 sm:grid-cols-3">
+            {TRUST_POINTS.map((point) => (
+              <div
+                key={point.title}
+                className={`${contentCardClass} flex flex-col items-center gap-3 text-center`}
+              >
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-light text-primary">
+                  <point.icon aria-hidden="true" className="h-7 w-7" />
+                </span>
+                <h3 className="font-display text-lg font-semibold text-ink">
+                  {point.title}
+                </h3>
+                <p className="text-sm text-muted">{point.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA FINAL */}
+      <section className="bg-primary-light px-4 py-16 text-center sm:py-20">
+        <h2 className="font-display text-2xl font-semibold text-ink sm:text-3xl">
+          Pronto para começar?
+        </h2>
+        <HeroCtas />
+      </section>
+
+      {/* RODAPÉ */}
+      <footer className="border-t border-muted/20 px-4 py-8 text-center text-sm text-muted">
+        <span className="font-display font-semibold text-ink">
+          {siteConfig.name}
+        </span>{" "}
+        © {new Date().getFullYear()}
+      </footer>
+    </main>
   );
 }

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Fraunces, JetBrains_Mono, Work_Sans } from "next/font/google";
 import "./globals.css";
 
+import { siteConfig } from "@/lib/site-config";
+
 // Self-hosted via next/font (downloaded at build time, served from our own
 // domain — no runtime request to Google's CDN). See CLAUDE.md "Sistema de
 // design" for why these three specific fonts were chosen.
@@ -24,8 +26,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cuidadores",
-  description: "Marketplace de cuidadores",
+  title: `${siteConfig.name} — ${siteConfig.tagline}`,
+  description:
+    "Marketplace que conecta famílias a cuidadores de confiança para idosos, crianças e pessoas com necessidades especiais.",
 };
 
 export default function RootLayout({
