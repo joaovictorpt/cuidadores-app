@@ -1,0 +1,132 @@
+import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
+
+import { ConnectionLine } from "@/app/dashboard/familia/_components/connection-line";
+import { ContratarButton } from "@/app/dashboard/familia/_components/contratar-button";
+import { authOptions } from "@/lib/auth";
+import { runStableMatchingForAllFamilies } from "@/lib/matching";
+import { prisma } from "@/lib/prisma";
+
+const CARE_TYPE_LABELS: Record<string, string> = {
+  ELDERLY: "Idosos",
+  CHILD: "Crianças",
+  SPECIAL_NEEDS: "Necessidades especiais",
+};
+
+// The Gale-Shapley stable match doesn't produce a 0-1 compatibility score
+// like the weighted search does (see lib/matching.ts) -- it's a categorical
+// "this is your matched caregiver" outcome. For the connection line's
+// curvature (which only exists to vary with a score) we use a fixed,
+// fairly taut value rather than computing a new score just for display:
+// a stable match is by construction the best available pairing for this
+// family, so a near-straight line fits without inventing new logic.
+const STABLE_MATCH_VISUAL_SCORE = 0.9;
+
+export default async function MatchRecomendadoPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  const matchesByCaregiver = await runStableMatchingForAllFamilies();
+
+  let matchedCaregiverUserId: string | null = null;
+  for (const [caregiverUserId, familyUserIds] of matchesByCaregiver) {
+    if (familyUserIds.includes(session.user.id)) {
+      matchedCaregiverUserId = caregiverUserId;
+      break;
+    }
+  }
+
+  const caregiverProfile = matchedCaregiverUserId
+    ? await prisma.caregiverProfile.findUnique({
+        where: { userId: matchedCaregiverUserId },
+        include: {
+          user: {
+            select: { name: true, reviewsReceived: { select: { rating: true } } },
+          },
+        },
+      })
+    : null;
+
+  const ratings = caregiverProfile?.user.reviewsReceived.map((r) => r.rating) ?? [];
+  const averageRating =
+    ratings.length > 0
+      ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+      : null;
+
+  return (
+    <main className="min-h-screen bg-background px-4 py-12">
+      <div className="mx-auto max-w-2xl">
+        <h1 className="mb-1 font-display text-3xl font-semibold text-ink">
+          Match recomendado
+        </h1>
+        <p className="mb-6 text-sm text-muted">
+          Resultado do matching estável (Gale-Shapley) para o seu perfil.
+        </p>
+
+        {!caregiverProfile && (
+          <p className="text-sm text-muted">
+            Nenhum cuidador foi designado a você nesta rodada de matching.
+          </p>
+        )}
+
+        {caregiverProfile && (
+          <div className="rounded-card border border-muted/20 bg-white p-6 shadow-sm sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div
+                  aria-hidden="true"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-light font-display text-lg font-semibold text-primary"
+                >
+                  {(caregiverProfile.user.name ?? "C").charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-ink">
+                    {caregiverProfile.user.name ?? "Cuidador"}
+                  </h2>
+                  {caregiverProfile.bio && (
+                    <p className="mt-1 text-sm text-muted">{caregiverProfile.bio}</p>
+                  )}
+                  <p className="mt-2 text-xs text-muted">
+                    {caregiverProfile.careTypes
+                      .map((type) => CARE_TYPE_LABELS[type] ?? type)
+                      .join(", ")}
+                  </p>
+                </div>
+              </div>
+              <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">
+                Recomendado
+              </span>
+            </div>
+
+            <dl className="mt-5 grid grid-cols-2 gap-4">
+              <div>
+                <dt className="text-xs text-muted">Avaliação</dt>
+                <dd className="font-mono text-sm text-ink/80">
+                  {averageRating !== null
+                    ? `${averageRating.toFixed(1)}/5 (${ratings.length})`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Valor/hora</dt>
+                <dd className="font-mono text-sm text-ink/80">
+                  {caregiverProfile.hourlyRate
+                    ? `R$ ${Number(caregiverProfile.hourlyRate).toFixed(2)}`
+                    : "—"}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="mt-5 flex items-center justify-between">
+              <ConnectionLine matchScore={STABLE_MATCH_VISUAL_SCORE} />
+              <ContratarButton caregiverUserId={matchedCaregiverUserId!} />
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}

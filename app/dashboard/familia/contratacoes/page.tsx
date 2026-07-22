@@ -1,0 +1,89 @@
+import { HireStatus, Role } from "@prisma/client";
+import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
+
+import { HireActionButton } from "@/app/dashboard/_components/hire-action-button";
+import { ReviewForm } from "@/app/dashboard/familia/_components/review-form";
+import { authOptions } from "@/lib/auth";
+import { getAvailableActions } from "@/lib/hire-transitions";
+import { HIRE_ACTION_LABELS, HIRE_STATUS_LABELS } from "@/lib/hire-labels";
+import { prisma } from "@/lib/prisma";
+
+export default async function ContratacoesPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  const hires = await prisma.hire.findMany({
+    where: { familyId: session.user.id },
+    include: {
+      caregiver: { select: { name: true, email: true } },
+      review: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return (
+    <main className="min-h-screen bg-background px-4 py-12">
+      <div className="mx-auto max-w-2xl">
+        <h1 className="mb-6 font-display text-3xl font-semibold text-ink">
+          Minhas contratações
+        </h1>
+
+        {hires.length === 0 && (
+          <p className="text-sm text-muted">
+            Você ainda não fez nenhuma solicitação.
+          </p>
+        )}
+
+        <div className="space-y-4">
+          {hires.map((hire) => {
+            const actions = getAvailableActions(hire.status, Role.FAMILY);
+
+            return (
+              <div
+                key={hire.id}
+                className="rounded-card border border-muted/20 bg-white p-6 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="font-display text-lg font-semibold text-ink">
+                      {hire.caregiver.name ?? hire.caregiver.email}
+                    </h2>
+                    <p className="mt-1 font-mono text-xs text-muted">
+                      Solicitado em {hire.createdAt.toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 text-sm font-medium text-primary">
+                    {HIRE_STATUS_LABELS[hire.status]}
+                  </span>
+                </div>
+
+                {actions.length > 0 && (
+                  <div className="mt-4 flex gap-2">
+                    {actions.map((action) => (
+                      <HireActionButton
+                        key={action}
+                        hireId={hire.id}
+                        targetStatus={action}
+                        label={HIRE_ACTION_LABELS[action] ?? action}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {hire.status === HireStatus.COMPLETED && !hire.review && (
+                  <div className="mt-4">
+                    <ReviewForm hireId={hire.id} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </main>
+  );
+}
