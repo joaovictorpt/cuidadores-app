@@ -5,6 +5,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ConnectionLine } from "@/app/dashboard/familia/_components/connection-line";
+import { TrevoLogo } from "@/app/components/trevo-logo";
 import { authOptions } from "@/lib/auth";
 import { siteConfig } from "@/lib/site-config";
 import { contentCardClass, heroButtonClass } from "@/lib/ui";
@@ -74,7 +75,8 @@ export default async function HomePage() {
     <main className="flex-1">
       {/* HERO */}
       <section className="px-4 py-20 text-center sm:py-28">
-        <h1 className="font-display text-5xl font-bold text-ink sm:text-6xl">
+        <TrevoLogo className="mx-auto h-16 w-16 text-primary sm:h-20 sm:w-20" />
+        <h1 className="mt-4 font-display text-5xl font-bold text-ink sm:text-6xl">
           {siteConfig.name}
         </h1>
         <p className="mt-3 font-display text-xl font-semibold text-primary sm:text-2xl">
@@ -153,11 +155,14 @@ export default async function HomePage() {
       </section>
 
       {/* RODAPÉ */}
-      <footer className="border-t border-muted/20 px-4 py-8 text-center text-sm text-muted">
-        <span className="font-display font-semibold text-ink">
-          {siteConfig.name}
-        </span>{" "}
-        © {new Date().getFullYear()}
+      <footer className="flex items-center justify-center gap-2 border-t border-muted/20 px-4 py-8 text-center text-sm text-muted">
+        <TrevoLogo className="h-5 w-5 text-primary" />
+        <span>
+          <span className="font-display font-semibold text-ink">
+            {siteConfig.name}
+          </span>{" "}
+          © {new Date().getFullYear()}
+        </span>
       </footer>
     </main>
   );
