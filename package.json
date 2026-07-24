@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test:matching": "tsx scripts/test-matching.ts",
-    "test:gale-shapley": "tsx scripts/test-gale-shapley.ts"
+    "test:gale-shapley": "tsx scripts/test-gale-shapley.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "cleanup:demo": "tsx scripts/cleanup-demo.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

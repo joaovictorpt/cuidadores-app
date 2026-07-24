@@ -48,7 +48,7 @@ Este projeto também é o TCC do desenvolvedor. Requisitos específicos:
   para matching estável entre famílias e cuidadores, como diferencial de 
   fundamentação teórica da banca.
 
-  ## Autenticação (NextAuth / Auth.js)
+## Autenticação (NextAuth / Auth.js)
 
 Implementado em `lib/auth.ts` (`authOptions`) e `app/api/auth/[...nextauth]/route.ts`:
 
@@ -226,11 +226,19 @@ Implementado sobre o model `Review` já existente no schema
 
 ## Sistema de design
 
-Aplicado por enquanto num escopo reduzido — tema global + `/login` + 
-`/cadastro` (+ `/familia` + `/cuidador`) + `/dashboard/familia/buscar` — para 
-validar antes de espalhar pro resto do site. Centralizado em 
-`lib/ui.ts` (classes reutilizáveis) e `app/globals.css` (tokens do tema, via 
-`@theme inline` — ver nota sobre Tailwind v4 abaixo).
+Aplicado em todo o site: tema global, `/login`, `/cadastro` (+ `/familia` +
+`/cuidador`), `/dashboard/familia/buscar`, `/dashboard/familia` e
+`/dashboard/cuidador` (telas iniciais), perfis (`/dashboard/familia/perfil`,
+`/dashboard/cuidador/perfil`), contratações/solicitações
+(`/dashboard/familia/contratacoes`, `/dashboard/cuidador/solicitacoes`,
+incluindo `hire-action-button.tsx` e `review-form.tsx`), e
+`/dashboard/familia/match-recomendado` (que também ganhou o `ConnectionLine`,
+com `matchScore` fixo em 0.9 já que o Gale-Shapley não produz um score 0-1
+como a busca — documentado no código). Único ajuste visual pontual: o
+badge de compatibilidade em `match-recomendado` é texto ("Recomendado"),
+não uma porcentagem, pela mesma razão. Centralizado em `lib/ui.ts` (classes
+reutilizáveis) e `app/globals.css` (tokens do tema, via `@theme inline` — ver
+nota sobre Tailwind v4 abaixo).
 
 **Paleta** (`app/globals.css`): tons claros/escuros de `primary` e `accent` 
 são derivados em HSL a partir do mesmo hue/saturation da cor base, variando 
@@ -277,10 +285,11 @@ ao lado, respeitando `prefers-reduced-motion`.
 
 **Elemento de assinatura — linha de conexão**: `app/dashboard/familia/_components/connection-line.tsx`, 
 um SVG simples (curva + dois pontos) representando família↔cuidador, usado 
-nos cards de `/dashboard/familia/buscar` (e pensado pra também entrar em 
-`/dashboard/familia/match-recomendado` quando esse redesign acontecer — ainda 
-não tocado). A curvatura varia com o `matchScore`: score alto → linha mais 
-reta ("tensa"), score baixo → linha mais solta. É só decorativo 
+nos cards de `/dashboard/familia/buscar` e `/dashboard/familia/match-recomendado` 
+(e no "Como funciona" da home — ver seção "Identidade do site"). A curvatura 
+varia com o `matchScore`: score alto → linha mais reta ("tensa"), score baixo 
+→ linha mais solta. Em `match-recomendado`, como não existe um score real, 
+usa-se uma constante 0.9, documentada no código. É só decorativo 
 (`aria-hidden`), posicionado sem competir com nome/match score/preço, que são 
 o foco real do card.
 
@@ -334,13 +343,23 @@ rodapé); qualquer lugar novo que precisar do nome/tagline do site (emails
 transacionais, outras páginas de marketing) deve importar dali, não repetir 
 a string.
 
+**Logo**: `app/components/trevo-logo.tsx` — componente React do SVG (ícone de
+trevo), `fill="currentColor"` no elemento raiz para herdar cor via Tailwind
+(`className="text-primary"` etc.) em vez de cor fixa. Usado no hero da home
+(`h-16 w-16`/`h-20 w-20` responsivo) e no rodapé (`h-5 w-5`), sempre em
+`primary`. `app/icon.svg` é uma cópia com `fill="#1F5C56"` fixo (favicons não
+herdam contexto de CSS) — detectado automaticamente pelo App Router como
+favicon, sem config extra em `layout.tsx`. O `favicon.ico` original do
+`create-next-app` foi mantido como fallback para navegadores sem suporte a
+favicon SVG.
+
 **Home page (`app/page.tsx`)**: pública, mas usuário já logado é 
 redirecionado automaticamente pro dashboard do seu `role` (`getServerSession` 
 + `redirect`, sem passar pelo `middleware.ts` — o matcher dele não cobre `/`). 
 Estrutura, de cima para baixo:
-- **Hero**: nome + tagline + frase curta de proposta + os dois CTAs lado a 
-  lado (`/cadastro/familia` e `/cadastro/cuidador`), com **hierarquia visual 
-  idêntica** entre os dois (mesmo estilo/cor/tamanho) — nenhum é "mais 
+- **Hero**: logo + nome + tagline + frase curta de proposta + os dois CTAs
+  lado a lado (`/cadastro/familia` e `/cadastro/cuidador`), com **hierarquia
+  visual idêntica** entre os dois (mesmo estilo/cor/tamanho) — nenhum é "mais 
   importante" que o outro.
 - **Como funciona**: 3 passos com ícone (`lucide-react`), conectados 
   visualmente pelo mesmo `ConnectionLine` já usado em `/buscar` e 
@@ -352,11 +371,64 @@ Estrutura, de cima para baixo:
 - **Por que confiar**: 3 pontos (senha criptografada, documentos verificados, 
   avaliações reais).
 - **CTA final**: repete os dois botões do hero antes do rodapé.
-- **Rodapé**: nome do site + ano calculado via `new Date().getFullYear()` 
-  (nunca um ano fixo).
+- **Rodapé**: logo pequena + nome do site + ano calculado via
+  `new Date().getFullYear()` (nunca um ano fixo).
 
 Dois novos tokens em `lib/ui.ts` pra isso: `heroButtonClass` (CTA grande, 
 full-width no mobile / lado a lado em telas maiores — `primaryButtonClass` 
 já existente é dimensionado pra botão de formulário, pequeno demais pra 
 hero) e `contentCardClass` (card de conteúdo genérico pra grid, mesma 
 linguagem visual do `cardClass` mas sem a largura máxima fixa).
+
+## Deploy (Vercel)
+
+Aplicação publicada na Vercel, conectada ao repositório GitHub
+(`github.com/joaovictorpt/cuidadores-app`) via integração nativa — todo push
+na branch `main` dispara um deploy automático de produção, sem passo manual.
+
+- **`package.json` tem `"postinstall": "prisma generate"`** — necessário
+  porque a Vercel faz cache de dependências entre builds; sem isso, o Prisma
+  Client pode ficar desatualizado após mudanças no schema.
+- **Banco de dados**: mesma instância do Supabase usada em desenvolvimento
+  (não há ambiente de staging/produção separado — decisão consciente de
+  simplicidade para o escopo de TCC, não recomendada para um produto real
+  com usuários de verdade).
+- **Variáveis de ambiente configuradas nas Environment Variables do projeto
+  na Vercel** (mesmos nomes do `.env` local): `DATABASE_URL`, `DIRECT_URL`,
+  `NEXTAUTH_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, e
+  `NEXTAUTH_URL` (**esta precisa ser o domínio de produção real,
+  `https://cuidadores-app.vercel.app` — não `localhost`**; sem isso o login
+  falha em produção).
+- Domínio de produção estável: `cuidadores-app.vercel.app` (a Vercel também
+  gera uma URL única por deploy, com hash, que não deve ser usada em nenhuma
+  variável de ambiente por não ser permanente).
+
+## Dados de demonstração
+
+`scripts/seed-demo.ts` gera dados fictícios (5 cuidadores, 3 famílias,
+contratações e avaliações) para usar ao vivo na apresentação do TCC. Roda com
+`npm run seed:demo`.
+
+- **Idempotente**: apaga todo dado de demonstração anterior antes de inserir
+  qualquer coisa (identificado pelo domínio de email exclusivo
+  `@demo.trevo.app`) — pode rodar de novo a qualquer momento sem duplicar
+  registros nem acumular lixo de execuções passadas.
+- **Roda contra o mesmo banco Supabase de produção** (não há staging
+  separado — mesma decisão já registrada na seção "Deploy (Vercel)"). Por
+  isso o script nunca deve ser executado sem confirmação explícita antes.
+- Endereços reais na região metropolitana de Goiânia (Goiânia, Aparecida de
+  Goiânia, Trindade, Senador Canedo), geocodificados de verdade via
+  `lib/geocoding.ts` — não há latitude/longitude hardcoded — para que busca e
+  matching produzam resultados coerentes na demo.
+- Todos os usuários demo (família e cuidador) compartilham a senha
+  `Demo@2026`, hasheada com bcrypt como qualquer outro usuário. Ao final da
+  execução, o script imprime uma tabela com email/senha/role de cada
+  conta criada, para consulta rápida durante a apresentação.
+- `scripts/cleanup-demo.ts` (`npm run cleanup:demo`) remove os dados de
+  demonstração **sem recriá-los** — útil para simplesmente limpar o banco
+  depois da apresentação, sem rodar o seed completo (e sem esperar a
+  geocodificação) de novo. Reaproveita a mesma função `cleanup()` exportada
+  de `scripts/seed-demo.ts` em vez de duplicar a lógica; `seed-demo.ts` só
+  executa seu próprio `main()` quando rodado diretamente (`require.main ===
+  module`), então importar `cleanup` dali não dispara um seed completo como
+  efeito colateral.
