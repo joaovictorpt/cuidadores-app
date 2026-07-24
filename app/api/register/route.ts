@@ -3,24 +3,33 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { isAdult, MIN_REGISTRATION_AGE } from "@/lib/age";
+import { BR_STATE_UFS } from "@/lib/br-states";
 import { buildGeocodeQuery, geocodeAddress } from "@/lib/geocoding";
 import { prisma } from "@/lib/prisma";
 
 const BCRYPT_SALT_ROUNDS = 12;
 
+// Shared by both branches: name/birthDate/phone/city/state are required for
+// everyone. `address` is family-only below -- CaregiverProfile has no
+// address column (see CLAUDE.md "Geolocalização"), so there's nothing to
+// require it against for caregivers.
 const baseFields = {
   email: z.string().email("Email inválido"),
   password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres"),
-  name: z.string().min(1).optional(),
+  name: z.string().min(1, "Nome é obrigatório"),
+  birthDate: z.coerce.date().refine(isAdult, {
+    message: `Você precisa ter pelo menos ${MIN_REGISTRATION_AGE} anos para se cadastrar`,
+  }),
+  phone: z.string().min(1, "Telefone é obrigatório"),
+  city: z.string().min(1, "Cidade é obrigatória"),
+  state: z.enum(BR_STATE_UFS, { message: "Selecione um estado válido" }),
 };
 
 const familySchema = z.object({
   ...baseFields,
   role: z.literal(Role.FAMILY),
-  phone: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  address: z.string().optional(),
+  address: z.string().min(1, "Endereço é obrigatório"),
   bio: z.string().optional(),
   neededCareTypes: z.array(z.nativeEnum(CareType)).optional(),
 });
@@ -28,9 +37,6 @@ const familySchema = z.object({
 const caregiverSchema = z.object({
   ...baseFields,
   role: z.literal(Role.CAREGIVER),
-  phone: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
   bio: z.string().optional(),
   hourlyRate: z.number().positive().optional(),
   experienceYears: z.number().int().nonnegative().optional(),
@@ -73,6 +79,7 @@ export async function POST(request: Request) {
         data: {
           email: data.email,
           name: data.name,
+          birthDate: data.birthDate,
           password: hashedPassword,
           role: data.role,
         },

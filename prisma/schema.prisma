@@ -15,6 +15,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
+  birthDate     DateTime?
   role          Role      @default(FAMILY)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

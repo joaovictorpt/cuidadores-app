@@ -72,6 +72,61 @@ Implementado em `lib/auth.ts` (`authOptions`) e `app/api/auth/[...nextauth]/rout
   e a API captura o erro `P2002`, retornando 409. Evita condição de corrida
   entre duas requisições simultâneas com o mesmo email.
 
+## Cadastro: campos obrigatórios, maioridade e localização
+
+Campos obrigatórios em `POST /api/register` (schema Zod em
+`app/api/register/route.ts`), para os dois branches (`FAMILY` e
+`CAREGIVER`): `name`, `birthDate`, `phone`, `city`, `state`. `address` é
+obrigatório **só no branch `FAMILY`** — `CaregiverProfile` não tem coluna de
+endereço (ver "Geolocalização" abaixo), então não há o que validar como
+obrigatório ali; isso não era explícito no pedido original, mas é a única
+leitura consistente com o schema atual sem adicionar uma coluna nova.
+
+- **Maioridade (18+)**: `lib/age.ts` (`calculateAge`/`isAdult`,
+  `MIN_REGISTRATION_AGE = 18`) é a fonte única da regra, usada tanto no
+  `.refine()` do Zod (autoritativo, `app/api/register/route.ts`) quanto nos
+  dois formulários de cadastro (`app/cadastro/familia/page.tsx`,
+  `app/cadastro/cuidador/page.tsx`) para feedback instantâneo antes mesmo do
+  submit — igual ao padrão já usado em `lib/hire-transitions.ts`. Calcula
+  idade em anos completos (considera se o aniversário deste ano já passou),
+  não uma subtração ingênua de anos.
+- **`User.name`/`User.birthDate`**: `name` já existia no schema mas nunca
+  era enviado pelos formulários de cadastro; `birthDate` é campo novo
+  (`DateTime?`, migration `add_user_birthdate`). Nenhum dos dois foi
+  adicionado às telas de edição de perfil (`profile-form.tsx`) — só ao
+  cadastro. As rotas `PATCH /api/caregiver-profile` e
+  `PATCH /api/family-profile` continuam sem tocar no model `User`.
+- **Mensagem de erro no cliente**: `lib/api-error.ts`
+  (`firstApiErrorMessage`) extrai a primeira mensagem de
+  `issues.fieldErrors`/`formErrors` da resposta 400 da API — antes disso, o
+  formulário só mostrava o texto genérico "Dados inválidos", nunca a
+  mensagem específica de qual campo falhou (idade mínima, campo vazio,
+  etc.), mesmo a API já retornando isso em `issues`.
+
+## Estado e cidade (select em vez de texto livre)
+
+- `lib/br-states.ts`: lista fixa das 27 UFs (sigla + nome), usada tanto para
+  popular o `<select>` de "Estado" quanto para validar server-side
+  (`z.enum(BR_STATE_UFS, ...)` em `app/api/register/route.ts`) — uma sigla
+  fora da lista nunca é aceita.
+- `lib/use-ibge-cities.ts`: hook que busca as cidades do estado escolhido na
+  API pública do IBGE
+  (`https://servicodados.ibge.gov.br/api/v1/localidades/estados/{UF}/municipios`).
+  Falha de rede nunca quebra o formulário — em vez do `<select>` de cidade,
+  o campo cai para um `<input>` de texto livre com um aviso, então o
+  cadastro continua possível mesmo com o IBGE fora do ar.
+- `app/components/location-fields.tsx`: componente compartilhado (Estado +
+  Cidade) usado nos 4 formulários que coletam endereço (cadastro e edição de
+  perfil, família e cuidador) — evita duplicar a lógica de reset da cidade
+  toda vez que o estado muda. Recebe um prop `required` porque cadastro
+  exige os dois campos mas edição de perfil não (validação do PATCH
+  continua opcional, só a UI ganhou o select).
+- Perfis salvos **antes** dessa mudança guardam cidade como texto livre
+  (ex.: variações de capitalização/grafia); se o valor salvo não bater
+  exatamente com um nome retornado pelo IBGE, o `<select>` de cidade abre em
+  branco na tela de edição — o usuário só precisa reselecionar. Não há
+  migração de dados para normalizar isso retroativamente.
+
 ## Proteção de rotas (middleware.ts)
 
 - Sem sessão em qualquer rota de `/dashboard/*` → redireciona para

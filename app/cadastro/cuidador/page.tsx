@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { LocationFields } from "@/app/components/location-fields";
 import { PhoneInput } from "@/app/components/phone-input";
+import { RequiredMark } from "@/app/components/required-mark";
+import { isAdult, MIN_REGISTRATION_AGE } from "@/lib/age";
+import { firstApiErrorMessage } from "@/lib/api-error";
 import {
   cardClass,
   errorTextClass,
@@ -23,9 +27,11 @@ const CARE_TYPES = [
 ] as const;
 
 const INITIAL_FORM = {
+  name: "",
   email: "",
   password: "",
   phone: "",
+  birthDate: "",
   city: "",
   state: "",
   bio: "",
@@ -53,6 +59,18 @@ export default function CadastroCuidadorPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    // Client-side check for instant feedback -- the server (app/api/register
+    // /route.ts) re-validates this authoritatively via the same lib/age.ts
+    // helper, so this can never be bypassed by skipping the UI.
+    const birthDateValue = form.birthDate ? new Date(form.birthDate) : null;
+    if (!birthDateValue || !isAdult(birthDateValue)) {
+      setError(
+        `Você precisa ter pelo menos ${MIN_REGISTRATION_AGE} anos para se cadastrar.`
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -60,12 +78,14 @@ export default function CadastroCuidadorPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          name: form.name,
           email: form.email,
           password: form.password,
           role: "CAREGIVER",
-          phone: form.phone || undefined,
-          city: form.city || undefined,
-          state: form.state || undefined,
+          phone: form.phone,
+          birthDate: form.birthDate,
+          city: form.city,
+          state: form.state,
           bio: form.bio || undefined,
           hourlyRate: form.hourlyRate ? Number(form.hourlyRate) : undefined,
           experienceYears: form.experienceYears ? Number(form.experienceYears) : undefined,
@@ -76,7 +96,7 @@ export default function CadastroCuidadorPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "Não foi possível concluir o cadastro.");
+        setError(firstApiErrorMessage(data, "Não foi possível concluir o cadastro."));
         setLoading(false);
         return;
       }
@@ -122,6 +142,20 @@ export default function CadastroCuidadorPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+            <label htmlFor="name" className={labelClass}>
+              Nome completo
+              <RequiredMark />
+            </label>
+            <input
+              id="name"
+              type="text"
+              required
+              value={form.name}
+              onChange={(event) => update("name", event.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
             <label htmlFor="email" className={labelClass}>
               Email
             </label>
@@ -151,6 +185,7 @@ export default function CadastroCuidadorPage() {
           <div>
             <label htmlFor="phone" className={labelClass}>
               Telefone
+              <RequiredMark />
             </label>
             <PhoneInput
               id="phone"
@@ -158,32 +193,29 @@ export default function CadastroCuidadorPage() {
               onChange={(value) => update("phone", value)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="city" className={labelClass}>
-                Cidade
-              </label>
-              <input
-                id="city"
-                type="text"
-                value={form.city}
-                onChange={(event) => update("city", event.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label htmlFor="state" className={labelClass}>
-                Estado
-              </label>
-              <input
-                id="state"
-                type="text"
-                value={form.state}
-                onChange={(event) => update("state", event.target.value)}
-                className={inputClass}
-              />
-            </div>
+          <div>
+            <label htmlFor="birthDate" className={labelClass}>
+              Data de nascimento
+              <RequiredMark />
+            </label>
+            <input
+              id="birthDate"
+              type="date"
+              required
+              value={form.birthDate}
+              onChange={(event) => update("birthDate", event.target.value)}
+              className={inputClass}
+            />
           </div>
+          <LocationFields
+            state={form.state}
+            city={form.city}
+            onStateChange={(value) =>
+              setForm((prev) => ({ ...prev, state: value, city: "" }))
+            }
+            onCityChange={(value) => update("city", value)}
+            required
+          />
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="hourlyRate" className={labelClass}>

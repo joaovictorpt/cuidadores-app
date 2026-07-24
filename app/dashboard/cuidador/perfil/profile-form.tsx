@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
+import { LocationFields } from "@/app/components/location-fields";
 import { PhoneInput } from "@/app/components/phone-input";
 import {
   cardClass,
@@ -113,32 +114,15 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
             onChange={(value) => update("phone", value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="city" className={labelClass}>
-              Cidade
-            </label>
-            <input
-              id="city"
-              type="text"
-              value={form.city}
-              onChange={(event) => update("city", event.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="state" className={labelClass}>
-              Estado
-            </label>
-            <input
-              id="state"
-              type="text"
-              value={form.state}
-              onChange={(event) => update("state", event.target.value)}
-              className={inputClass}
-            />
-          </div>
-        </div>
+        <LocationFields
+          state={form.state}
+          city={form.city}
+          onStateChange={(value) =>
+            setForm((prev) => ({ ...prev, state: value, city: "" }))
+          }
+          onCityChange={(value) => update("city", value)}
+          required={false}
+        />
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="hourlyRate" className={labelClass}>
