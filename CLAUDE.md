@@ -479,9 +479,30 @@ Aplicação publicada na Vercel, conectada ao repositório GitHub
 (`github.com/joaovictorpt/cuidadores-app`) via integração nativa — todo push
 na branch `main` dispara um deploy automático de produção, sem passo manual.
 
-- **`package.json` tem `"postinstall": "prisma generate"`** — necessário
-  porque a Vercel faz cache de dependências entre builds; sem isso, o Prisma
-  Client pode ficar desatualizado após mudanças no schema.
+- **`"build": "prisma generate && next build"`** — o script `build` chama
+  `prisma generate` explicitamente antes do `next build`, em vez de confiar
+  só no `postinstall` (que também existe, como rede de segurança redundante,
+  ver abaixo). Motivo: um deploy quebrou em produção com o erro "Property
+  `birthDate` does not exist" logo depois da migration que adicionou esse
+  campo — o `schema.prisma` já tinha a coluna nova, mas o `@prisma/client`
+  gerado (que fica em `node_modules/.prisma/client`, incluído no cache de
+  dependências da Vercel entre builds) ainda era da versão anterior do
+  schema. **Causa raiz real, não só teórica**: ao investigar, o
+  `"postinstall": "prisma generate"` mencionado neste documento nunca tinha
+  sido efetivamente adicionado ao `package.json` (só existia aqui na
+  documentação) — então não havia *nenhum* passo garantindo Prisma Client
+  atualizado no build, cache ou não. Isso já foi corrigido (`postinstall`
+  agora existe de verdade, ver abaixo), mas o `prisma generate` explícito no
+  `build` fica como proteção adicional independente disso: mesmo se o
+  `postinstall` for pulado (a Vercel pode reaproveitar `node_modules` do
+  cache sem rodar hooks de instalação quando nenhuma dependência declarada
+  mudou — só o schema, que não é uma dependência do npm), o `build` gera o
+  client de novo de qualquer forma. As duas entradas coexistem de propósito:
+  redundância segura, não conflito.
+- **`package.json` também tem `"postinstall": "prisma generate"`** —
+  mesma necessidade (Prisma Client sincronizado com o schema), só que
+  disparado em qualquer `npm install` (local ou CI), não só no `build` da
+  Vercel.
 - **Banco de dados**: mesma instância do Supabase usada em desenvolvimento
   (não há ambiente de staging/produção separado — decisão consciente de
   simplicidade para o escopo de TCC, não recomendada para um produto real
