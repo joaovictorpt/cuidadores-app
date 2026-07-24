@@ -42,7 +42,7 @@ export default async function DocumentosPage() {
           Meus documentos
         </h1>
 
-        <div className={cardClass}>
+        <div className={`${cardClass} mx-auto`}>
           <h2 className="mb-4 font-display text-lg font-semibold text-ink">
             Enviar novo documento
           </h2>

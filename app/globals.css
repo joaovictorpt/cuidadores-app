@@ -27,3 +27,16 @@
   --font-sans: var(--font-work-sans);
   --font-mono: var(--font-jetbrains-mono);
 }
+
+/* Hide native number-input spin buttons everywhere in the app (hourlyRate,
+   experienceYears, etc.) -- applied once globally instead of repeating
+   these vendor-prefixed rules on every <input type="number">. */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

@@ -171,6 +171,12 @@ Implementado em `lib/auth.ts` (`authOptions`) e `app/api/auth/[...nextauth]/rout
   `rankCaregiversForFamily` direto via Prisma, sem passar pela API) mostrando
   um card com link para `/dashboard/familia/perfil`, em vez do texto genérico
   de "nenhum resultado".
+- **Intencional**: a menção textual ao algoritmo "Gale-Shapley" foi removida
+  de `app/dashboard/familia/match-recomendado/page.tsx` — nome de algoritmo é
+  detalhe de implementação interna, não deveria vazar pra UI que a família
+  vê. A explicação do algoritmo permanece como comentário técnico no próprio
+  código (perto de `STABLE_MATCH_VISUAL_SCORE`), só o texto visível na tela
+  mudou.
 
 ## Fluxo de contratação (Hire)
 
@@ -292,6 +298,16 @@ varia com o `matchScore`: score alto → linha mais reta ("tensa"), score baixo
 usa-se uma constante 0.9, documentada no código. É só decorativo 
 (`aria-hidden`), posicionado sem competir com nome/match score/preço, que são 
 o foco real do card.
+
+**Máscara de telefone**: `app/components/phone-input.tsx` envolve o
+`PatternFormat` da biblioteca **react-number-format** para aplicar o formato
+`(XX) XXXXX-XXXX` em todo campo `phone` do site (cadastro de família,
+cadastro de cuidador, edição de perfil de ambos) — escolhida em vez de uma
+máscara escrita à mão porque já lida corretamente com posição do cursor,
+backspace sobre caracteres da máscara e colagem de texto, e declara suporte
+oficial a React 19 (`peerDependencies` inclui `^19.0.0`). O valor propagado
+pelo `onChange` do componente é sempre o dígitos-puros (`values.value`), não
+a string formatada.
 
 **Nota técnica — Tailwind v4**: este projeto não tem `tailwind.config.ts` — o 
 Tailwind v4 usa config CSS-first via `@theme` dentro de `app/globals.css`, 

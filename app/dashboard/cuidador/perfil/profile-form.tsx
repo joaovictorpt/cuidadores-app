@@ -2,12 +2,14 @@
 
 import { useState, type FormEvent } from "react";
 
+import { PhoneInput } from "@/app/components/phone-input";
 import {
   cardClass,
   errorTextClass,
   inputClass,
   labelClass,
   primaryButtonClass,
+  sanitizeDigitsOnly,
   successTextClass,
 } from "@/lib/ui";
 
@@ -105,12 +107,10 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
           <label htmlFor="phone" className={labelClass}>
             Telefone
           </label>
-          <input
+          <PhoneInput
             id="phone"
-            type="tel"
             value={form.phone}
-            onChange={(event) => update("phone", event.target.value)}
-            className={inputClass}
+            onChange={(value) => update("phone", value)}
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -164,7 +164,9 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
               min="0"
               step="1"
               value={form.experienceYears}
-              onChange={(event) => update("experienceYears", event.target.value)}
+              onChange={(event) =>
+                update("experienceYears", sanitizeDigitsOnly(event.target.value))
+              }
               className={inputClass}
             />
           </div>

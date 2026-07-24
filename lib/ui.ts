@@ -41,3 +41,11 @@ export const heroButtonClass =
 export const errorTextClass = "rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700";
 
 export const successTextClass = "rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700";
+
+// Strips everything but 0-9 -- used on the "Anos de experiência" field so
+// users can't type "." or "," (a <input type="number"> still allows those,
+// plus "e"/"+"/"-", since scientific notation is technically valid there).
+// This is UX only: the real validation is the Zod schema on the server.
+export function sanitizeDigitsOnly(value: string): string {
+  return value.replace(/\D/g, "");
+}

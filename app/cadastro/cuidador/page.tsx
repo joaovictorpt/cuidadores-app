@@ -5,12 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { PhoneInput } from "@/app/components/phone-input";
 import {
   cardClass,
   errorTextClass,
   inputClass,
   labelClass,
   primaryButtonClass,
+  sanitizeDigitsOnly,
+  secondaryButtonClass,
 } from "@/lib/ui";
 
 const CARE_TYPES = [
@@ -103,6 +106,13 @@ export default function CadastroCuidadorPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <div className={cardClass}>
+        <Link
+          href="/cadastro"
+          className={`${secondaryButtonClass} mb-6 inline-block`}
+        >
+          ← Voltar
+        </Link>
+
         <h1 className="mb-1 font-display text-2xl font-semibold text-ink">
           Cadastro de cuidador
         </h1>
@@ -142,12 +152,10 @@ export default function CadastroCuidadorPage() {
             <label htmlFor="phone" className={labelClass}>
               Telefone
             </label>
-            <input
+            <PhoneInput
               id="phone"
-              type="tel"
               value={form.phone}
-              onChange={(event) => update("phone", event.target.value)}
-              className={inputClass}
+              onChange={(value) => update("phone", value)}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -201,7 +209,9 @@ export default function CadastroCuidadorPage() {
                 min="0"
                 step="1"
                 value={form.experienceYears}
-                onChange={(event) => update("experienceYears", event.target.value)}
+                onChange={(event) =>
+                  update("experienceYears", sanitizeDigitsOnly(event.target.value))
+                }
                 className={inputClass}
               />
             </div>

@@ -63,7 +63,8 @@ export default async function MatchRecomendadoPage() {
           Match recomendado
         </h1>
         <p className="mb-6 text-sm text-muted">
-          Resultado do matching estável (Gale-Shapley) para o seu perfil.
+          O cuidador mais compatível com o seu perfil, considerando todas as
+          famílias e cuidadores disponíveis no momento.
         </p>
 
         {!caregiverProfile && (
