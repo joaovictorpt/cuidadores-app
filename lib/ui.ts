@@ -18,7 +18,7 @@ export const contentCardClass =
 export const labelClass = "mb-1 block text-sm font-medium text-muted";
 
 export const inputClass =
-  `w-full rounded-lg border border-muted/40 bg-white px-3 py-2 text-sm text-ink placeholder:text-muted/60 ${focusRing}`;
+  `w-full rounded-lg border border-muted/40 bg-white px-3 py-2 text-sm text-ink placeholder:text-muted/60 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;
 
 export const primaryButtonClass =
   `w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-dark motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;

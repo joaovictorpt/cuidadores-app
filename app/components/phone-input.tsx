@@ -21,6 +21,7 @@ export function PhoneInput({ id, value, onChange }: PhoneInputProps) {
       id={id}
       type="tel"
       format="(##) #####-####"
+      placeholder="(00) 00000-0000"
       value={value}
       onValueChange={(values) => onChange(values.value)}
       className={inputClass}

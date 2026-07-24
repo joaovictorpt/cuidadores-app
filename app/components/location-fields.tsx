@@ -1,5 +1,6 @@
 "use client";
 
+import { Combobox } from "@/app/components/combobox";
 import { RequiredMark } from "@/app/components/required-mark";
 import { BR_STATES } from "@/lib/br-states";
 import { inputClass, labelClass } from "@/lib/ui";
@@ -16,8 +17,13 @@ type LocationFieldsProps = {
   required: boolean;
 };
 
+const STATE_OPTIONS = BR_STATES.map((state) => ({ value: state.uf, label: state.name }));
+
 // Shared "Estado" + "Cidade" pair used by every form that collects an
-// address (cadastro and profile-edit, family and caregiver). City is
+// address (cadastro and profile-edit, family and caregiver). Both are
+// searchable comboboxes (see app/components/combobox.tsx) rather than
+// native <select>s, so a long city list can be filtered by typing while
+// still only accepting a value that's actually in the list. City is
 // IBGE-backed and always resets when the state changes, since a city name
 // from the previous state is meaningless once the state changes.
 export function LocationFields({
@@ -28,6 +34,7 @@ export function LocationFields({
   required,
 }: LocationFieldsProps) {
   const { cities, loading, error } = useIbgeCities(state);
+  const cityOptions = cities.map((cityName) => ({ value: cityName, label: cityName }));
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -36,20 +43,14 @@ export function LocationFields({
           Estado
           {required && <RequiredMark />}
         </label>
-        <select
+        <Combobox
           id="state"
-          required={required}
           value={state}
-          onChange={(event) => onStateChange(event.target.value)}
-          className={inputClass}
-        >
-          <option value="">Selecione</option>
-          {BR_STATES.map((brState) => (
-            <option key={brState.uf} value={brState.uf}>
-              {brState.name}
-            </option>
-          ))}
-        </select>
+          options={STATE_OPTIONS}
+          onChange={onStateChange}
+          required={required}
+          placeholder="Selecione"
+        />
       </div>
 
       <div>
@@ -71,27 +72,18 @@ export function LocationFields({
             <p className="mt-1 text-xs text-red-700">{error}</p>
           </>
         ) : (
-          <select
+          <Combobox
             id="city"
+            value={city}
+            options={cityOptions}
+            onChange={onCityChange}
             required={required}
             disabled={!state || loading}
-            value={city}
-            onChange={(event) => onCityChange(event.target.value)}
-            className={inputClass}
-          >
-            <option value="">
-              {!state
-                ? "Selecione o estado primeiro"
-                : loading
-                  ? "Carregando..."
-                  : "Selecione"}
-            </option>
-            {cities.map((cityName) => (
-              <option key={cityName} value={cityName}>
-                {cityName}
-              </option>
-            ))}
-          </select>
+            placeholder={
+              !state ? "Selecione o estado primeiro" : loading ? "Carregando..." : "Selecione"
+            }
+            emptyMessage={loading ? "Carregando..." : "Nenhuma cidade encontrada"}
+          />
         )}
       </div>
     </div>

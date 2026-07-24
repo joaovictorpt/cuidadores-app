@@ -158,6 +158,7 @@ export default function CadastroCuidadorPage() {
           <div>
             <label htmlFor="email" className={labelClass}>
               Email
+              <RequiredMark />
             </label>
             <input
               id="email"
@@ -171,6 +172,7 @@ export default function CadastroCuidadorPage() {
           <div>
             <label htmlFor="password" className={labelClass}>
               Senha
+              <RequiredMark />
             </label>
             <input
               id="password"

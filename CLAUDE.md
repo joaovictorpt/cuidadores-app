@@ -103,29 +103,51 @@ leitura consistente com o schema atual sem adicionar uma coluna nova.
   mensagem específica de qual campo falhou (idade mínima, campo vazio,
   etc.), mesmo a API já retornando isso em `issues`.
 
-## Estado e cidade (select em vez de texto livre)
+## Estado e cidade (combobox com busca, não select nem texto livre)
 
 - `lib/br-states.ts`: lista fixa das 27 UFs (sigla + nome), usada tanto para
-  popular o `<select>` de "Estado" quanto para validar server-side
+  popular as opções de "Estado" quanto para validar server-side
   (`z.enum(BR_STATE_UFS, ...)` em `app/api/register/route.ts`) — uma sigla
   fora da lista nunca é aceita.
 - `lib/use-ibge-cities.ts`: hook que busca as cidades do estado escolhido na
   API pública do IBGE
   (`https://servicodados.ibge.gov.br/api/v1/localidades/estados/{UF}/municipios`).
-  Falha de rede nunca quebra o formulário — em vez do `<select>` de cidade,
+  Falha de rede nunca quebra o formulário — em vez do combobox de cidade,
   o campo cai para um `<input>` de texto livre com um aviso, então o
   cadastro continua possível mesmo com o IBGE fora do ar.
+- **`app/components/combobox.tsx`**: combobox acessível genérico (padrão ARIA
+  1.2 "combobox with list autocomplete" — `role="combobox"`,
+  `aria-expanded`, `aria-controls`, `aria-activedescendant`, listbox com
+  `role="option"`/`aria-selected`), navegável por teclado (setas, Enter
+  confirma, Escape fecha revertendo). Filtro por substring,
+  case-insensitive e **sem sensibilidade a acento** (normaliza via
+  `.normalize("NFD")` + `\p{Diacritic}`, então "goias" encontra "Goiás").
+  Diferença crucial em relação a um `<input>` comum: o `value` que chega ao
+  `onChange` só pode ser um dos `options` — texto digitado que não bate
+  com nenhuma opção (exata, após normalização) é descartado no blur,
+  revertendo pro último valor válido selecionado. Estilizado com os mesmos
+  tokens de `lib/ui.ts` (o dropdown reaproveita `bg-white`/`border-muted`/
+  `primary`/`primary-light` do tema).
 - `app/components/location-fields.tsx`: componente compartilhado (Estado +
-  Cidade) usado nos 4 formulários que coletam endereço (cadastro e edição de
-  perfil, família e cuidador) — evita duplicar a lógica de reset da cidade
-  toda vez que o estado muda. Recebe um prop `required` porque cadastro
-  exige os dois campos mas edição de perfil não (validação do PATCH
-  continua opcional, só a UI ganhou o select).
+  Cidade, cada um um `Combobox`) usado nos 4 formulários que coletam
+  endereço (cadastro e edição de perfil, família e cuidador) — evita
+  duplicar a lógica de reset da cidade toda vez que o estado muda. Recebe um
+  prop `required` porque cadastro exige os dois campos mas edição de perfil
+  não (validação do PATCH continua opcional, só a UI ganhou o combobox).
 - Perfis salvos **antes** dessa mudança guardam cidade como texto livre
   (ex.: variações de capitalização/grafia); se o valor salvo não bater
-  exatamente com um nome retornado pelo IBGE, o `<select>` de cidade abre em
-  branco na tela de edição — o usuário só precisa reselecionar. Não há
+  exatamente com um nome retornado pelo IBGE, o combobox de cidade abre
+  vazio na tela de edição — o usuário só precisa reselecionar. Não há
   migração de dados para normalizar isso retroativamente.
+- **Histórico**: a versão anterior usava `<select>` nativo do navegador
+  (que já bloqueia texto livre por definição — testado e confirmado antes
+  desta mudança, digitar no campo não alterava o valor). Um bug de "Estado/
+  Cidade aceitando texto livre" foi relatado depois dessa versão ir ao ar,
+  mas não foi possível reproduzi-lo rodando o código local — a explicação
+  mais provável é teste contra uma versão em cache do navegador ou contra o
+  deploy de produção antes dele terminar de atualizar após o último push.
+  A troca para combobox com busca (pedida separadamente, ver acima) resolve
+  a preocupação de qualquer forma, independente da causa do relato original.
 
 ## Proteção de rotas (middleware.ts)
 
