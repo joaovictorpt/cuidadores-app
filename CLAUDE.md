@@ -92,17 +92,18 @@ leitura consistente com o schema atual sem adicionar uma coluna nova.
   não uma subtração ingênua de anos.
 - **Limites de `birthDate` (1900–hoje)**: além da checagem de 18+, `lib/age.ts`
   (`MIN_BIRTH_DATE`, `isBirthDateInFuture`, `isBirthDateTooOld`,
-  `formatDateInputValue`) rejeita datas futuras ou anteriores a 1900 — sem
-  isso, um `<input type="date">` sozinho aceita digitar um ano sem limite de
-  dígitos (ex.: "18888"), gerando uma data absurda que ainda passaria pela
-  checagem de maioridade. Aplicado em três camadas: os atributos nativos
-  `min`/`max` do input (bloqueiam no seletor do navegador, `max` calculado
-  dinamicamente com `new Date()` a cada render, nunca hardcoded), a checagem
-  client-side antes do submit (mesma função, feedback instantâneo), e o
-  `.refine()` autoritativo no Zod (`app/api/register/route.ts`) — a ordem dos
-  três `.refine()` encadeados ali importa: futuro/muito antigo é checado
-  *antes* da regra de maioridade, senão uma data absurda mostra a mensagem
-  confusa "menor de idade" em vez de apontar o problema real na data.
+  `formatDateInputValue`, `parseBirthDateInput` — ver "Sistema de design"
+  abaixo para o campo em si) rejeita datas futuras ou anteriores a 1900.
+  Aplicado em duas camadas: a checagem client-side antes do submit (mesma
+  função, feedback instantâneo) e o `.refine()` autoritativo no Zod
+  (`app/api/register/route.ts`) — a ordem dos três `.refine()` encadeados
+  ali importa: futuro/muito antigo é checado *antes* da regra de maioridade,
+  senão uma data absurda mostra a mensagem confusa "menor de idade" em vez
+  de apontar o problema real na data. Antes de virar o campo mascarado
+  descrito em "Sistema de design", essa validação também dependia dos
+  atributos `min`/`max` de um `<input type="date">` nativo; hoje o campo é
+  texto puro, então toda a responsabilidade de bloquear datas fora da faixa
+  está nessas duas camadas de código (client + servidor).
 - **`User.name`/`User.birthDate`**: `name` já existia no schema mas nunca
   era enviado pelos formulários de cadastro; `birthDate` é campo novo
   (`DateTime?`, migration `add_user_birthdate`). Nenhum dos dois foi
@@ -431,6 +432,38 @@ backspace sobre caracteres da máscara e colagem de texto, e declara suporte
 oficial a React 19 (`peerDependencies` inclui `^19.0.0`). O valor propagado
 pelo `onChange` do componente é sempre o dígitos-puros (`values.value`), não
 a string formatada.
+
+**Máscara de data de nascimento**: `app/components/birth-date-input.tsx`
+segue exatamente o mesmo padrão do `phone-input.tsx` acima — `PatternFormat`
+com formato `##/##/####` e placeholder `dd/mm/aaaa`, em vez do
+`<input type="date">` nativo usado originalmente. Motivo da troca: o destaque
+em bloco azul que o navegador desenha nos segmentos (dia/mês/ano) de um
+input de data nativo **não é estilizável via CSS** — não dá pra fazer esse
+destaque seguir a paleta do tema (`primary`, etc.), então o campo nunca
+ficaria visualmente consistente com o resto do formulário. Com o campo
+sendo texto puro, `lib/age.ts` (`parseBirthDateInput`) ganhou a
+responsabilidade de converter "DD/MM/AAAA" digitado em `Date` antes de
+qualquer validação — a parte não óbvia ali é a técnica de "round-trip" para
+pegar datas impossíveis: `new Date(ano, mes, dia)` do JavaScript nunca
+lança erro para um dia inválido (ex.: `new Date(2020, 1, 31)`, 31 de
+fevereiro) — ele "rola" silenciosamente pra frente (vira 2 ou 3 de março).
+`parseBirthDateInput` reconstrói a data a partir dos três números digitados
+e compara `getFullYear()`/`getMonth()`/`getDate()` do resultado contra o que
+foi digitado; se não bater exatamente, a data é rejeitada como impossível
+em vez de silenciosamente virar uma data diferente da que o usuário quis.
+
+**Bloquear scroll em inputs numéricos**: convenção do projeto, não específica
+de nenhum campo — todo `<input type="number">` novo deve receber
+`onWheel={(e) => e.currentTarget.blur()}` (centralizado como `blurOnWheel`
+em `lib/ui.ts`, para não repetir a lógica em cada input). Motivo: navegadores
+alteram o valor de um input numérico focado ao rolar o scroll do mouse sobre
+ele — um comportamento nativo *separado* das setinhas de incremento/
+decremento (que já são escondidas via CSS em `app/globals.css`) e que
+`preventDefault()` sozinho no evento `wheel` não bloqueia de forma
+confiável em todos os navegadores. Tirar o foco do campo ao detectar
+`wheel` é o jeito simples e confiável de resolver isso, e não interfere na
+rolagem normal da página. Aplicado hoje em `hourlyRate` e `experienceYears`
+(cadastro e edição de perfil de cuidador).
 
 **Nota técnica — Tailwind v4**: este projeto não tem `tailwind.config.ts` — o 
 Tailwind v4 usa config CSS-first via `@theme` dentro de `app/globals.css`, 

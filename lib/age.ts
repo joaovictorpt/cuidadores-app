@@ -42,13 +42,39 @@ export function isBirthDateTooOld(birthDate: Date): boolean {
   return birthDate.getTime() < MIN_BIRTH_DATE.getTime();
 }
 
-// Formats a Date as the "YYYY-MM-DD" string <input type="date"> expects for
-// its value/min/max attributes, using local date components (not
-// `toISOString()`, which is UTC-based and can land on the wrong day
-// depending on the browser's timezone).
+// Formats a Date as the "YYYY-MM-DD" string the API's Zod schema expects
+// (and, previously, what <input type="date"> used for its value/min/max
+// attributes), using local date components (not `toISOString()`, which is
+// UTC-based and can land on the wrong day depending on the browser's
+// timezone).
 export function formatDateInputValue(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+// Parses a "DD/MM/AAAA" birth date (or its raw "DDMMAAAA" digits, as typed
+// through BirthDateInput's mask) into a Date. Returns null for anything
+// incomplete (fewer than 8 digits) or calendar-impossible (e.g. 31/02) --
+// `new Date(year, month, day)` never throws, it silently rolls an invalid
+// day/month over into a *different*, wrong date instead, so the only
+// reliable check is round-tripping the constructed Date's fields back
+// against what was typed.
+export function parseBirthDateInput(value: string): Date | null {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 8) return null;
+
+  const day = Number(digits.slice(0, 2));
+  const month = Number(digits.slice(2, 4));
+  const year = Number(digits.slice(4, 8));
+
+  const date = new Date(year, month - 1, day);
+
+  const roundTrips =
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day;
+
+  return roundTrips ? date : null;
 }

@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { LocationFields } from "@/app/components/location-fields";
 import { PhoneInput } from "@/app/components/phone-input";
 import {
+  blurOnWheel,
   cardClass,
   errorTextClass,
   inputClass,
@@ -135,6 +136,7 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
               step="0.01"
               value={form.hourlyRate}
               onChange={(event) => update("hourlyRate", event.target.value)}
+              onWheel={blurOnWheel}
               className={inputClass}
             />
           </div>
@@ -151,6 +153,7 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
               onChange={(event) =>
                 update("experienceYears", sanitizeDigitsOnly(event.target.value))
               }
+              onWheel={blurOnWheel}
               className={inputClass}
             />
           </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { BirthDateInput } from "@/app/components/birth-date-input";
 import { LocationFields } from "@/app/components/location-fields";
 import { PhoneInput } from "@/app/components/phone-input";
 import { RequiredMark } from "@/app/components/required-mark";
@@ -15,9 +16,11 @@ import {
   isBirthDateTooOld,
   MIN_BIRTH_DATE,
   MIN_REGISTRATION_AGE,
+  parseBirthDateInput,
 } from "@/lib/age";
 import { firstApiErrorMessage } from "@/lib/api-error";
 import {
+  blurOnWheel,
   cardClass,
   errorTextClass,
   inputClass,
@@ -70,10 +73,14 @@ export default function CadastroCuidadorPage() {
     // Client-side checks for instant feedback -- the server (app/api
     // /register/route.ts) re-validates all of this authoritatively via the
     // same lib/age.ts helpers, so none of it can be bypassed by skipping the
-    // UI (the date input's min/max only stop the browser's own picker, not
-    // a hand-crafted request).
-    const birthDateValue = form.birthDate ? new Date(form.birthDate) : null;
-    if (!birthDateValue || isBirthDateInFuture(birthDateValue)) {
+    // UI. parseBirthDateInput rejects both incomplete input (fewer than 8
+    // digits typed) and calendar-impossible dates (e.g. 31/02) up front.
+    const birthDateValue = parseBirthDateInput(form.birthDate);
+    if (!birthDateValue) {
+      setError("Data de nascimento inválida ou incompleta.");
+      return;
+    }
+    if (isBirthDateInFuture(birthDateValue)) {
       setError("Data de nascimento não pode ser no futuro.");
       return;
     }
@@ -100,7 +107,7 @@ export default function CadastroCuidadorPage() {
           password: form.password,
           role: "CAREGIVER",
           phone: form.phone,
-          birthDate: form.birthDate,
+          birthDate: formatDateInputValue(birthDateValue),
           city: form.city,
           state: form.state,
           bio: form.bio || undefined,
@@ -217,15 +224,11 @@ export default function CadastroCuidadorPage() {
               Data de nascimento
               <RequiredMark />
             </label>
-            <input
+            <BirthDateInput
               id="birthDate"
-              type="date"
               required
-              min={formatDateInputValue(MIN_BIRTH_DATE)}
-              max={formatDateInputValue(new Date())}
               value={form.birthDate}
-              onChange={(event) => update("birthDate", event.target.value)}
-              className={inputClass}
+              onChange={(value) => update("birthDate", value)}
             />
           </div>
           <LocationFields
@@ -249,6 +252,7 @@ export default function CadastroCuidadorPage() {
                 step="0.01"
                 value={form.hourlyRate}
                 onChange={(event) => update("hourlyRate", event.target.value)}
+                onWheel={blurOnWheel}
                 className={inputClass}
               />
             </div>
@@ -265,6 +269,7 @@ export default function CadastroCuidadorPage() {
                 onChange={(event) =>
                   update("experienceYears", sanitizeDigitsOnly(event.target.value))
                 }
+                onWheel={blurOnWheel}
                 className={inputClass}
               />
             </div>

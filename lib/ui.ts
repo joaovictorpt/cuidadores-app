@@ -1,3 +1,5 @@
+import type { WheelEvent } from "react";
+
 // Shared Tailwind class strings for the app's design system. Keeping these
 // centralized means every screen that imports from here stays in sync when
 // the system evolves, instead of each page hand-rolling its own colors.
@@ -48,4 +50,15 @@ export const successTextClass = "rounded-lg bg-green-50 px-3 py-2 text-sm text-g
 // This is UX only: the real validation is the Zod schema on the server.
 export function sanitizeDigitsOnly(value: string): string {
   return value.replace(/\D/g, "");
+}
+
+// Browsers let the mouse wheel silently change a focused <input
+// type="number">'s value -- a separate native behavior from the spin-button
+// arrows (already hidden via CSS in app/globals.css), and `preventDefault()`
+// on the wheel event alone doesn't reliably suppress it across browsers.
+// Blurring the input on wheel is the standard, reliable fix: pass this as
+// `onWheel` on every numeric input (hourlyRate, experienceYears, etc.)
+// instead of repeating the handler inline.
+export function blurOnWheel(event: WheelEvent<HTMLInputElement>): void {
+  event.currentTarget.blur();
 }
