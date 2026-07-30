@@ -3,7 +3,13 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { isAdult, MIN_REGISTRATION_AGE } from "@/lib/age";
+import {
+  isAdult,
+  isBirthDateInFuture,
+  isBirthDateTooOld,
+  MIN_BIRTH_YEAR,
+  MIN_REGISTRATION_AGE,
+} from "@/lib/age";
 import { BR_STATE_UFS } from "@/lib/br-states";
 import { buildGeocodeQuery, geocodeAddress } from "@/lib/geocoding";
 import { prisma } from "@/lib/prisma";
@@ -18,9 +24,19 @@ const baseFields = {
   email: z.string().email("Email inválido"),
   password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres"),
   name: z.string().min(1, "Nome é obrigatório"),
-  birthDate: z.coerce.date().refine(isAdult, {
-    message: `Você precisa ter pelo menos ${MIN_REGISTRATION_AGE} anos para se cadastrar`,
-  }),
+  // Order matters: an absurd date (e.g. a typo'd unbounded year) should
+  // surface as a range error, not a confusing "you must be 18+" message.
+  birthDate: z.coerce
+    .date()
+    .refine((date) => !isBirthDateInFuture(date), {
+      message: "Data de nascimento não pode ser no futuro",
+    })
+    .refine((date) => !isBirthDateTooOld(date), {
+      message: `Data de nascimento não pode ser anterior a ${MIN_BIRTH_YEAR}`,
+    })
+    .refine(isAdult, {
+      message: `Você precisa ter pelo menos ${MIN_REGISTRATION_AGE} anos para se cadastrar`,
+    }),
   phone: z.string().min(1, "Telefone é obrigatório"),
   city: z.string().min(1, "Cidade é obrigatória"),
   state: z.enum(BR_STATE_UFS, { message: "Selecione um estado válido" }),

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 
+import { BackLink } from "@/app/dashboard/_components/back-link";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -19,17 +20,20 @@ export default async function EditarPerfilCuidadorPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
-      <ProfileForm
-        initialProfile={{
-          phone: profile?.phone ?? "",
-          city: profile?.city ?? "",
-          state: profile?.state ?? "",
-          bio: profile?.bio ?? "",
-          hourlyRate: profile?.hourlyRate ? profile.hourlyRate.toString() : "",
-          experienceYears: profile?.experienceYears?.toString() ?? "",
-          careTypes: profile?.careTypes ?? [],
-        }}
-      />
+      <div className="w-full max-w-md">
+        <BackLink href="/dashboard/cuidador" />
+        <ProfileForm
+          initialProfile={{
+            phone: profile?.phone ?? "",
+            city: profile?.city ?? "",
+            state: profile?.state ?? "",
+            bio: profile?.bio ?? "",
+            hourlyRate: profile?.hourlyRate ? profile.hourlyRate.toString() : "",
+            experienceYears: profile?.experienceYears?.toString() ?? "",
+            careTypes: profile?.careTypes ?? [],
+          }}
+        />
+      </div>
     </main>
   );
 }

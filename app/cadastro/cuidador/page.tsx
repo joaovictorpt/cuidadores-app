@@ -8,7 +8,14 @@ import { useState, type FormEvent } from "react";
 import { LocationFields } from "@/app/components/location-fields";
 import { PhoneInput } from "@/app/components/phone-input";
 import { RequiredMark } from "@/app/components/required-mark";
-import { isAdult, MIN_REGISTRATION_AGE } from "@/lib/age";
+import {
+  formatDateInputValue,
+  isAdult,
+  isBirthDateInFuture,
+  isBirthDateTooOld,
+  MIN_BIRTH_DATE,
+  MIN_REGISTRATION_AGE,
+} from "@/lib/age";
 import { firstApiErrorMessage } from "@/lib/api-error";
 import {
   cardClass,
@@ -60,11 +67,21 @@ export default function CadastroCuidadorPage() {
     event.preventDefault();
     setError(null);
 
-    // Client-side check for instant feedback -- the server (app/api/register
-    // /route.ts) re-validates this authoritatively via the same lib/age.ts
-    // helper, so this can never be bypassed by skipping the UI.
+    // Client-side checks for instant feedback -- the server (app/api
+    // /register/route.ts) re-validates all of this authoritatively via the
+    // same lib/age.ts helpers, so none of it can be bypassed by skipping the
+    // UI (the date input's min/max only stop the browser's own picker, not
+    // a hand-crafted request).
     const birthDateValue = form.birthDate ? new Date(form.birthDate) : null;
-    if (!birthDateValue || !isAdult(birthDateValue)) {
+    if (!birthDateValue || isBirthDateInFuture(birthDateValue)) {
+      setError("Data de nascimento não pode ser no futuro.");
+      return;
+    }
+    if (isBirthDateTooOld(birthDateValue)) {
+      setError(`Data de nascimento não pode ser anterior a ${MIN_BIRTH_DATE.getFullYear()}.`);
+      return;
+    }
+    if (!isAdult(birthDateValue)) {
       setError(
         `Você precisa ter pelo menos ${MIN_REGISTRATION_AGE} anos para se cadastrar.`
       );
@@ -204,6 +221,8 @@ export default function CadastroCuidadorPage() {
               id="birthDate"
               type="date"
               required
+              min={formatDateInputValue(MIN_BIRTH_DATE)}
+              max={formatDateInputValue(new Date())}
               value={form.birthDate}
               onChange={(event) => update("birthDate", event.target.value)}
               className={inputClass}

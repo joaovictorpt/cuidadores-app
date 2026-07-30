@@ -2,6 +2,7 @@ import { HireStatus, Role } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 
+import { BackLink } from "@/app/dashboard/_components/back-link";
 import { HireActionButton } from "@/app/dashboard/_components/hire-action-button";
 import { ReviewForm } from "@/app/dashboard/familia/_components/review-form";
 import { authOptions } from "@/lib/auth";
@@ -28,6 +29,8 @@ export default async function ContratacoesPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-12">
       <div className="mx-auto max-w-2xl">
+        <BackLink href="/dashboard/familia" />
+
         <h1 className="mb-6 font-display text-3xl font-semibold text-ink">
           Minhas contratações
         </h1>

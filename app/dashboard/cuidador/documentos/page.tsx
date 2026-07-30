@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 
+import { BackLink } from "@/app/dashboard/_components/back-link";
 import { DocumentDeleteButton } from "@/app/dashboard/cuidador/_components/document-delete-button";
 import { DocumentUploadForm } from "@/app/dashboard/cuidador/_components/document-upload-form";
 import { authOptions } from "@/lib/auth";
@@ -38,9 +39,13 @@ export default async function DocumentosPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-12">
       <div className="mx-auto max-w-2xl space-y-8">
-        <h1 className="font-display text-3xl font-semibold text-ink">
-          Meus documentos
-        </h1>
+        <div>
+          <BackLink href="/dashboard/cuidador" />
+
+          <h1 className="font-display text-3xl font-semibold text-ink">
+            Meus documentos
+          </h1>
+        </div>
 
         <div className={`${cardClass} mx-auto`}>
           <h2 className="mb-4 font-display text-lg font-semibold text-ink">

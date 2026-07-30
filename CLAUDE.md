@@ -90,6 +90,19 @@ leitura consistente com o schema atual sem adicionar uma coluna nova.
   submit — igual ao padrão já usado em `lib/hire-transitions.ts`. Calcula
   idade em anos completos (considera se o aniversário deste ano já passou),
   não uma subtração ingênua de anos.
+- **Limites de `birthDate` (1900–hoje)**: além da checagem de 18+, `lib/age.ts`
+  (`MIN_BIRTH_DATE`, `isBirthDateInFuture`, `isBirthDateTooOld`,
+  `formatDateInputValue`) rejeita datas futuras ou anteriores a 1900 — sem
+  isso, um `<input type="date">` sozinho aceita digitar um ano sem limite de
+  dígitos (ex.: "18888"), gerando uma data absurda que ainda passaria pela
+  checagem de maioridade. Aplicado em três camadas: os atributos nativos
+  `min`/`max` do input (bloqueiam no seletor do navegador, `max` calculado
+  dinamicamente com `new Date()` a cada render, nunca hardcoded), a checagem
+  client-side antes do submit (mesma função, feedback instantâneo), e o
+  `.refine()` autoritativo no Zod (`app/api/register/route.ts`) — a ordem dos
+  três `.refine()` encadeados ali importa: futuro/muito antigo é checado
+  *antes* da regra de maioridade, senão uma data absurda mostra a mensagem
+  confusa "menor de idade" em vez de apontar o problema real na data.
 - **`User.name`/`User.birthDate`**: `name` já existia no schema mas nunca
   era enviado pelos formulários de cadastro; `birthDate` é campo novo
   (`DateTime?`, migration `add_user_birthdate`). Nenhum dos dois foi
@@ -159,6 +172,39 @@ leitura consistente com o schema atual sem adicionar uma coluna nova.
   prefixo de rota.
 - Nota: o Next.js 16 sinaliza depreciação de `middleware.ts` em favor de
   `proxy.ts` — ainda não migrado, é só aviso, não quebra nada por enquanto.
+
+## Navegação de volta (back-link.tsx)
+
+`app/dashboard/_components/back-link.tsx` é o **padrão oficial** para
+qualquer página de dashboard voltar pro dashboard do próprio `role`
+(`/dashboard/familia` ou `/dashboard/cuidador`). Existe porque a primeira
+leva de páginas foi ao ar sem nenhum link de volta em várias telas
+(perfil, busca, match-recomendado, contratações, solicitações, documentos)
+— cada uma teria exigido adicionar um botão manualmente, o que já causou
+essa inconsistência uma vez.
+
+- **Toda página nova sob `/dashboard/**` deve incluir `<BackLink href="..." />`
+  como o primeiro elemento do conteúdo, antes do `<h1>`** — não é opcional,
+  é a checklist mínima pra uma página de dashboard ser considerada completa.
+- `href` é passado explicitamente pela página chamadora (não é
+  auto-detectado a partir da sessão) — toda página de dashboard já roda
+  `getServerSession` server-side e sabe o `role` em escopo, então não faz
+  sentido o componente refazer esse trabalho num hook client-side
+  (`useSession`) só para descobrir o que a página já sabe.
+- Estilizado com `secondaryButtonClass` (não `primaryButtonClass`) de
+  propósito — nunca deve competir visualmente com o botão de ação principal
+  da tela (`Salvar`, `Contratar`, etc.), mesmo padrão visual do "← Voltar"
+  já usado em `/cadastro/familia` e `/cadastro/cuidador`.
+- Nas duas telas de editar perfil (`app/dashboard/familia/perfil/page.tsx`,
+  `app/dashboard/cuidador/perfil/page.tsx`), o `<main>` é `flex items-center
+  justify-center` (card único centralizado) — o `BackLink` fica dentro de um
+  `<div className="w-full max-w-md">` que envolve `BackLink` + `ProfileForm`
+  juntos, pra ele ficar centralizado como uma unidade acima do card, em vez
+  de precisar reestruturar o layout centralizado existente. Como o
+  `BackLink` está no `page.tsx` (Server Component) e não dentro do
+  `ProfileForm` (Client Component), ele nunca desaparece durante o
+  salvamento — continua visível e clicável antes, durante, e depois de
+  salvar as alterações.
 
 ## Banco de dados
 
