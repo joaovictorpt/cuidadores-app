@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { calculateAverageRating } from "@/lib/reviews";
 
 const createReviewSchema = z.object({
   hireId: z.string().min(1),
@@ -107,11 +108,9 @@ export async function GET(request: Request) {
     orderBy: { createdAt: "desc" },
   });
 
-  const total = reviews.length;
-  const average =
-    total > 0
-      ? reviews.reduce((sum, review) => sum + review.rating, 0) / total
-      : null;
+  const { average, total } = calculateAverageRating(
+    reviews.map((review) => review.rating)
+  );
 
   return NextResponse.json({ reviews, average, total });
 }

@@ -354,6 +354,49 @@ Implementado sobre o model `Review` já existente no schema
   — visitantes não autenticados podem ver as avaliações de um cuidador antes 
   de se cadastrar.
 
+## Dashboards
+
+`app/dashboard/familia/page.tsx` e `app/dashboard/cuidador/page.tsx` eram só
+uma lista de links — agora mostram cards de resumo (grid responsivo com
+`contentCardClass`) além dos links de navegação já existentes, que
+continuam intactos abaixo dos cards. Sem rotas de API novas: os dois já são
+Server Components com `getServerSession`, então os dados são buscados via
+Prisma direto ali, junto com a sessão.
+
+- **Dashboard da família**:
+  - Card "Contratações": `prisma.hire.count` para `PENDING` e `ACCEPTED` da
+    família logada (duas queries via `Promise.all`, não uma só com
+    `groupBy` — mais simples de ler para só dois status).
+  - Card "Match recomendado": `findMatchedCaregiverForFamily` (novo, em
+    `lib/matching.ts`) — extrai o loop "qual cuidador essa família recebeu"
+    que antes só existia dentro de `match-recomendado/page.tsx`, que agora
+    importa a mesma função em vez de reimplementar a busca. Ainda roda o
+    Gale-Shapley completo (`runStableMatchingForAllFamilies`) por trás; não
+    há cache, mesma ressalva de escala já documentada na seção de matching.
+  - Banner de perfil incompleto: reaproveita o mesmo card
+    (`border-primary/20 bg-primary-light`) e texto/link já usados em
+    `/dashboard/familia/buscar` para o caso de `neededCareTypes` vazio, em
+    vez de inventar um estilo novo para o mesmo aviso.
+- **Dashboard do cuidador**:
+  - Card "Solicitações": `prisma.hire.count` de `PENDING` recebidos. Com
+    pelo menos 1 pendente, o card troca para `border-accent`/`bg-accent-light`
+    (chamando atenção de que precisa de ação); com zero, é um
+    `contentCardClass` normal.
+  - Card "Sua avaliação": média + total via `calculateAverageRating`, nova
+    função em `lib/reviews.ts` — antes esse cálculo (reduce + divisão) vivia
+    duplicado em `GET /api/reviews` e em `lib/matching.ts`
+    (`toCaregiverForMatching`); os dois agora importam a mesma função em vez
+    de recalcular. Sem nenhuma review, mostra "Sem avaliações ainda" em vez
+    de "0" (que pareceria uma nota real, não ausência de dado). Este card
+    não é um link — não existe uma página dedicada de "minhas avaliações"
+    hoje para apontar.
+  - Card "Documentos": `prisma.document.count` por `caregiverId` do
+    `CaregiverProfile` da sessão. Com zero documentos, o texto é um convite
+    ("envie para começar a ser verificado"), não um aviso de erro — só o
+    card "Solicitações" usa a cor de alerta (`accent`), porque só ali "zero"
+    seria uma notícia ruim; aqui zero documentos é só o estado inicial
+    normal de uma conta nova.
+
 ## Sistema de design
 
 Aplicado em todo o site: tema global, `/login`, `/cadastro` (+ `/familia` +

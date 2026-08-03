@@ -5,8 +5,9 @@ import { BackLink } from "@/app/dashboard/_components/back-link";
 import { ConnectionLine } from "@/app/dashboard/familia/_components/connection-line";
 import { ContratarButton } from "@/app/dashboard/familia/_components/contratar-button";
 import { authOptions } from "@/lib/auth";
-import { runStableMatchingForAllFamilies } from "@/lib/matching";
+import { findMatchedCaregiverForFamily } from "@/lib/matching";
 import { prisma } from "@/lib/prisma";
+import { calculateAverageRating } from "@/lib/reviews";
 
 const CARE_TYPE_LABELS: Record<string, string> = {
   ELDERLY: "Idosos",
@@ -30,15 +31,7 @@ export default async function MatchRecomendadoPage() {
     redirect("/login");
   }
 
-  const matchesByCaregiver = await runStableMatchingForAllFamilies();
-
-  let matchedCaregiverUserId: string | null = null;
-  for (const [caregiverUserId, familyUserIds] of matchesByCaregiver) {
-    if (familyUserIds.includes(session.user.id)) {
-      matchedCaregiverUserId = caregiverUserId;
-      break;
-    }
-  }
+  const matchedCaregiverUserId = await findMatchedCaregiverForFamily(session.user.id);
 
   const caregiverProfile = matchedCaregiverUserId
     ? await prisma.caregiverProfile.findUnique({
@@ -52,10 +45,7 @@ export default async function MatchRecomendadoPage() {
     : null;
 
   const ratings = caregiverProfile?.user.reviewsReceived.map((r) => r.rating) ?? [];
-  const averageRating =
-    ratings.length > 0
-      ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
-      : null;
+  const { average: averageRating, total: ratingCount } = calculateAverageRating(ratings);
 
   return (
     <main className="min-h-screen bg-background px-4 py-12">
@@ -110,7 +100,7 @@ export default async function MatchRecomendadoPage() {
                 <dt className="text-xs text-muted">Avaliação</dt>
                 <dd className="font-mono text-sm text-ink/80">
                   {averageRating !== null
-                    ? `${averageRating.toFixed(1)}/5 (${ratings.length})`
+                    ? `${averageRating.toFixed(1)}/5 (${ratingCount})`
                     : "—"}
                 </dd>
               </div>

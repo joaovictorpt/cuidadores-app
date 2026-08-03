@@ -4,6 +4,7 @@ import { stableMatching } from "@/lib/gale-shapley";
 import { haversineDistanceKm } from "@/lib/haversine";
 import { matchingConfig } from "@/lib/matching-config";
 import { prisma } from "@/lib/prisma";
+import { calculateAverageRating } from "@/lib/reviews";
 
 export type CaregiverForMatching = {
   id: string;
@@ -195,10 +196,8 @@ function toCaregiverForMatching(profile: {
   user: { name: string | null; reviewsReceived: { rating: number }[] };
 }): CaregiverForMatching {
   const ratings = profile.user.reviewsReceived.map((review) => review.rating);
-  const averageRating =
-    ratings.length > 0
-      ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
-      : null;
+  const { average: averageRating, total: reviewCount } =
+    calculateAverageRating(ratings);
 
   return {
     id: profile.id,
@@ -210,7 +209,7 @@ function toCaregiverForMatching(profile: {
     latitude: profile.latitude,
     longitude: profile.longitude,
     averageRating,
-    reviewCount: ratings.length,
+    reviewCount,
   };
 }
 
@@ -335,4 +334,22 @@ export async function runStableMatchingForAllFamilies(): Promise<
     receiverPreferences,
     receiverCapacity: matchingConfig.caregiverCapacity,
   });
+}
+
+// Runs the global stable matching and picks out just the one result a
+// single family cares about -- shared by /dashboard/familia/match-recomendado
+// and the family dashboard's summary card, so the "which caregiver did I get
+// matched with" lookup only lives in one place.
+export async function findMatchedCaregiverForFamily(
+  familyUserId: string
+): Promise<string | null> {
+  const matchesByCaregiver = await runStableMatchingForAllFamilies();
+
+  for (const [caregiverUserId, familyUserIds] of matchesByCaregiver) {
+    if (familyUserIds.includes(familyUserId)) {
+      return caregiverUserId;
+    }
+  }
+
+  return null;
 }
