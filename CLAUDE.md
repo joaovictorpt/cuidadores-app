@@ -174,7 +174,26 @@ leitura consistente com o schema atual sem adicionar uma coluna nova.
 - Nota: o Next.js 16 sinaliza depreciação de `middleware.ts` em favor de
   `proxy.ts` — ainda não migrado, é só aviso, não quebra nada por enquanto.
 
-## Navegação de volta (back-link.tsx)
+## Navegação (site-header.tsx + back-link.tsx)
+
+`app/components/site-header.tsx` é a barra fina persistente no topo do site
+(logo + "Trevo" dentro de um `<Link href="/">`), presente em toda página
+**exceto a home** (`/`) — que já tem a logo grande no próprio hero,
+então repeti-la num header logo acima seria redundante. Decisão técnica:
+em vez de mover `cadastro/`, `login/` e `dashboard/` para dentro de um route
+group (o jeito "canônico" de dar layouts diferentes por rota no App
+Router), o componente é um Client Component que chama `usePathname()` e
+retorna `null` quando `pathname === "/"`. Motivo: essas três pastas já são
+importadas em dezenas de lugares via caminhos como
+`@/app/dashboard/_components/...` — colocá-las num grupo (ex.:
+`app/(app)/dashboard/...`) exigiria reescrever todos esses imports só para
+esconder um header numa única rota. Layouts do App Router também não têm
+acesso ao pathname atual no server, então a checagem client-side é o
+mecanismo padrão recomendado pelo próprio Next.js para esse caso. Renderizado
+no `app/layout.tsx` (raiz), antes de `{children}` — convive sem conflito com
+o `BackLink` de cada página de dashboard: o header fica fixo no topo da
+página inteira, o `BackLink` fica no topo do conteúdo específico da tela,
+logo abaixo dele.
 
 `app/dashboard/_components/back-link.tsx` é o **padrão oficial** para
 qualquer página de dashboard voltar pro dashboard do próprio `role`

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, JetBrains_Mono, Work_Sans } from "next/font/google";
 import "./globals.css";
 
+import { SiteHeader } from "@/app/components/site-header";
 import { siteConfig } from "@/lib/site-config";
 
 // Self-hosted via next/font (downloaded at build time, served from our own
@@ -42,6 +43,7 @@ export default function RootLayout({
       className={`${fraunces.variable} ${workSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background font-sans text-ink">
+        <SiteHeader />
         {children}
       </body>
     </html>
