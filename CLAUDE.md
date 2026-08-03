@@ -165,7 +165,8 @@ leitura consistente com o schema atual sem adicionar uma coluna nova.
 
 ## Proteção de rotas (middleware.ts)
 
-- Sem sessão em qualquer rota de `/dashboard/*` → redireciona para
+- Sem sessão em qualquer rota de `/dashboard/*` (incluindo o próprio
+  `/dashboard`, o despachante — ver "Navegação" abaixo) → redireciona para
   `/login?callbackUrl=<rota original>`.
 - `role !== FAMILY` em `/dashboard/familia/*` → redireciona para `/`.
 - `role !== CAREGIVER` em `/dashboard/cuidador/*` → redireciona para `/`.
@@ -176,24 +177,58 @@ leitura consistente com o schema atual sem adicionar uma coluna nova.
 
 ## Navegação (site-header.tsx + back-link.tsx)
 
-`app/components/site-header.tsx` é a barra fina persistente no topo do site
-(logo + "Trevo" dentro de um `<Link href="/">`), presente em toda página
-**exceto a home** (`/`) — que já tem a logo grande no próprio hero,
-então repeti-la num header logo acima seria redundante. Decisão técnica:
-em vez de mover `cadastro/`, `login/` e `dashboard/` para dentro de um route
-group (o jeito "canônico" de dar layouts diferentes por rota no App
-Router), o componente é um Client Component que chama `usePathname()` e
-retorna `null` quando `pathname === "/"`. Motivo: essas três pastas já são
-importadas em dezenas de lugares via caminhos como
-`@/app/dashboard/_components/...` — colocá-las num grupo (ex.:
-`app/(app)/dashboard/...`) exigiria reescrever todos esses imports só para
-esconder um header numa única rota. Layouts do App Router também não têm
-acesso ao pathname atual no server, então a checagem client-side é o
-mecanismo padrão recomendado pelo próprio Next.js para esse caso. Renderizado
-no `app/layout.tsx` (raiz), antes de `{children}` — convive sem conflito com
-o `BackLink` de cada página de dashboard: o header fica fixo no topo da
-página inteira, o `BackLink` fica no topo do conteúdo específico da tela,
-logo abaixo dele.
+**Redirecionamento pós-login: por que saiu da home e virou `/dashboard`**.
+Antes, `app/page.tsx` (a home) fazia `getServerSession` + `redirect` pro
+dashboard do `role` do usuário — ou seja, a home nunca era *vista* por quem
+já estava logado, só existia como uma tela pública, e a barra do cabeçalho
+(ver abaixo) escondia a si mesma nessa rota justamente por causa disso. Essa
+combinação (home some pra quem já tem conta + header some só na home) parava
+de fazer sentido no momento em que o header precisou de um estado "logado"
+próprio (item abaixo) — a home passa a ser uma página normal, sempre
+visível, e `app/dashboard/page.tsx` é um **despachante** dedicado
+(Server Component, só `getServerSession` + `redirect` pro
+`/dashboard/familia` ou `/dashboard/cuidador` do `role`) que existe
+especificamente pra ser o alvo estável de qualquer link que precise "me leve
+pro meu painel" sem saber de antemão qual é o `role` (o menu de conta do
+header, o formulário de login quando não há `callbackUrl` na URL). O
+`middleware.ts` precisou ganhar `"/dashboard"` (sem `:path*`) no `matcher`
+pra continuar protegendo essa rota nova antes mesmo dela renderizar.
+
+`app/components/site-header.tsx` é a barra fina persistente no topo do
+site (logo + "Trevo" dentro de um `<Link href="/">`), presente em
+**todas** as páginas agora, incluindo a home — antes ela se escondia em
+`/` via `usePathname()` num Client Component, mas isso deixou de ser
+necessário (e de fazer sentido) quando a home virou uma página que
+usuários logados também visitam normalmente. O lado direito do header é
+**sensível à sessão**:
+- **Sem sessão**: link "Entrar" (`/login`).
+- **Com sessão**: `app/components/account-menu.tsx`, um botão com ícone de
+  conta (`CircleUserRound`, `lucide-react`) que abre um dropdown com
+  "Painel de controle" (`/dashboard`, o despachante acima) e "Sair"
+  (`signOut` do NextAuth).
+
+**Decisão técnica — Server Component + um Client Component pequeno, não o
+header inteiro em `useSession()`**: `site-header.tsx` voltou a ser um
+Server Component (perdeu o `"use client"`/`usePathname()` de quando
+precisava se esconder na home) e resolve a sessão com `getServerSession`
+— que, na estratégia JWT deste projeto (ver "Autenticação"), só decodifica
+o cookie, sem round-trip ao banco, então repetir essa chamada aqui (além
+das páginas que já a chamam) é barato. Isso evita o "flash" de estado
+deslogado que `useSession()` causaria no primeiro render (client precisa
+buscar `/api/auth/session` antes de saber se há sessão). Só a parte
+genuinamente interativa — abrir/fechar o dropdown, fechar ao clicar fora
+ou apertar Escape — precisa de estado de cliente, por isso só o
+`AccountMenu` é `"use client"`, não o header inteiro. Efeito colateral
+aceito: páginas que antes eram estáticas no build (`/`, `/login`,
+`/cadastro/*`) agora renderizam dinamicamente (ƒ) porque o header em
+`app/layout.tsx` chama `getServerSession` em toda requisição — custo
+pequeno e esperado pra um header que precisa saber quem está logado em
+qualquer rota.
+
+Renderizado no `app/layout.tsx` (raiz), antes de `{children}` — convive
+sem conflito com o `BackLink` de cada página de dashboard: o header fica
+fixo no topo da página inteira, o `BackLink` fica no topo do conteúdo
+específico da tela, logo abaixo dele.
 
 `app/dashboard/_components/back-link.tsx` é o **padrão oficial** para
 qualquer página de dashboard voltar pro dashboard do próprio `role`
@@ -587,10 +622,10 @@ favicon, sem config extra em `layout.tsx`. O `favicon.ico` original do
 `create-next-app` foi mantido como fallback para navegadores sem suporte a
 favicon SVG.
 
-**Home page (`app/page.tsx`)**: pública, mas usuário já logado é 
-redirecionado automaticamente pro dashboard do seu `role` (`getServerSession` 
-+ `redirect`, sem passar pelo `middleware.ts` — o matcher dele não cobre `/`). 
-Estrutura, de cima para baixo:
+**Home page (`app/page.tsx`)**: pública e **sempre visível**, mesmo pra quem
+já está logado — não redireciona mais ninguém (ver "Navegação" acima para o
+porquê e onde esse redirecionamento pós-login foi parar). Estrutura, de
+cima para baixo:
 - **Hero**: logo + nome + tagline + frase curta de proposta + os dois CTAs
   lado a lado (`/cadastro/familia` e `/cadastro/cuidador`), com **hierarquia
   visual idêntica** entre os dois (mesmo estilo/cor/tamanho) — nenhum é "mais 

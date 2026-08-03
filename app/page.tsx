@@ -1,12 +1,8 @@
 import { FileCheck, Lock, ShieldCheck, Star, UserPlus, Users } from "lucide-react";
-import { Role } from "@prisma/client";
-import { getServerSession } from "next-auth/next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { ConnectionLine } from "@/app/dashboard/familia/_components/connection-line";
 import { TrevoLogo } from "@/app/components/trevo-logo";
-import { authOptions } from "@/lib/auth";
 import { siteConfig } from "@/lib/site-config";
 import { contentCardClass, heroButtonClass } from "@/lib/ui";
 
@@ -60,17 +56,7 @@ function HeroCtas() {
   );
 }
 
-export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-
-  if (session?.user?.role === Role.FAMILY) {
-    redirect("/dashboard/familia");
-  }
-
-  if (session?.user?.role === Role.CAREGIVER) {
-    redirect("/dashboard/cuidador");
-  }
-
+export default function HomePage() {
   return (
     <main className="flex-1">
       {/* HERO */}

@@ -40,6 +40,14 @@ export const accentButtonClass =
 export const heroButtonClass =
   `inline-flex w-full items-center justify-center rounded-lg bg-primary px-8 py-4 text-base font-semibold text-white transition hover:bg-primary-dark motion-reduce:transition-none sm:w-auto sm:text-lg ${focusRing}`;
 
+// Same size as heroButtonClass, accent color instead of primary -- for the
+// one action on a screen that should visually outrank everything else
+// (e.g. "Buscar cuidadores" on the family dashboard, the single most
+// important thing a family can do there). `text-ink` (not `text-white`)
+// matches accentButtonClass's contrast choice for the same background.
+export const heroAccentButtonClass =
+  `inline-flex w-full items-center justify-center rounded-lg bg-accent px-8 py-4 text-base font-semibold text-ink transition hover:bg-accent-dark motion-reduce:transition-none sm:w-auto sm:text-lg ${focusRing}`;
+
 export const errorTextClass = "rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700";
 
 export const successTextClass = "rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700";

@@ -37,7 +37,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
       return;
     }
 
-    router.push(callbackUrl || "/");
+    router.push(callbackUrl || "/dashboard");
     router.refresh();
   }
 

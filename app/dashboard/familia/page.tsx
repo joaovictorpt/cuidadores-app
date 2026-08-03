@@ -7,7 +7,7 @@ import { LogoutButton } from "@/app/dashboard/_components/logout-button";
 import { authOptions } from "@/lib/auth";
 import { findMatchedCaregiverForFamily } from "@/lib/matching";
 import { prisma } from "@/lib/prisma";
-import { contentCardClass, primaryButtonClass } from "@/lib/ui";
+import { contentCardClass, heroAccentButtonClass, primaryButtonClass } from "@/lib/ui";
 
 export default async function DashboardFamiliaPage() {
   const session = await getServerSession(authOptions);
@@ -45,6 +45,13 @@ export default async function DashboardFamiliaPage() {
           Bem-vindo, {session.user.name || session.user.email}
         </h1>
         <p className="mb-6 text-sm text-muted">Painel de controle da família</p>
+
+        <Link
+          href="/dashboard/familia/buscar"
+          className={`${heroAccentButtonClass} mb-6`}
+        >
+          Buscar cuidadores
+        </Link>
 
         {missingCareTypes && (
           <div className="mb-6 rounded-card border border-primary/20 bg-primary-light p-6 text-center">
@@ -95,12 +102,6 @@ export default async function DashboardFamiliaPage() {
             className="block text-sm font-medium text-primary hover:underline"
           >
             Editar perfil
-          </Link>
-          <Link
-            href="/dashboard/familia/buscar"
-            className="block text-sm font-medium text-primary hover:underline"
-          >
-            Buscar cuidadores
           </Link>
         </div>
 
