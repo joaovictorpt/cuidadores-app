@@ -44,7 +44,7 @@ export default async function DashboardFamiliaPage() {
         <h1 className="mb-1 font-display text-3xl font-semibold text-ink">
           Bem-vindo, {session.user.name || session.user.email}
         </h1>
-        <p className="mb-6 text-sm text-muted">Dashboard da família</p>
+        <p className="mb-6 text-sm text-muted">Painel de controle da família</p>
 
         {missingCareTypes && (
           <div className="mb-6 rounded-card border border-primary/20 bg-primary-light p-6 text-center">
@@ -101,18 +101,6 @@ export default async function DashboardFamiliaPage() {
             className="block text-sm font-medium text-primary hover:underline"
           >
             Buscar cuidadores
-          </Link>
-          <Link
-            href="/dashboard/familia/match-recomendado"
-            className="block text-sm font-medium text-primary hover:underline"
-          >
-            Match recomendado
-          </Link>
-          <Link
-            href="/dashboard/familia/contratacoes"
-            className="block text-sm font-medium text-primary hover:underline"
-          >
-            Minhas contratações
           </Link>
         </div>
 

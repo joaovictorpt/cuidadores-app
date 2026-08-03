@@ -43,7 +43,7 @@ export default async function DashboardCuidadorPage() {
         <h1 className="mb-1 font-display text-3xl font-semibold text-ink">
           Bem-vindo, {session.user.name || session.user.email}
         </h1>
-        <p className="mb-6 text-sm text-muted">Dashboard do cuidador</p>
+        <p className="mb-6 text-sm text-muted">Painel de controle do cuidador</p>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Link
@@ -96,18 +96,6 @@ export default async function DashboardCuidadorPage() {
             className="block text-sm font-medium text-primary hover:underline"
           >
             Editar perfil
-          </Link>
-          <Link
-            href="/dashboard/cuidador/solicitacoes"
-            className="block text-sm font-medium text-primary hover:underline"
-          >
-            Solicitações recebidas
-          </Link>
-          <Link
-            href="/dashboard/cuidador/documentos"
-            className="block text-sm font-medium text-primary hover:underline"
-          >
-            Meus documentos
           </Link>
         </div>
 
