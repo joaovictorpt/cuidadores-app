@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ConnectionLine } from "@/app/dashboard/familia/_components/connection-line";
 import { TrevoLogo } from "@/app/components/trevo-logo";
 import { siteConfig } from "@/lib/site-config";
-import { contentCardClass, heroButtonClass } from "@/lib/ui";
+import { contentCardClass, heroButtonClass, heroOutlineButtonClass } from "@/lib/ui";
 
 const STEPS = [
   {
@@ -49,7 +49,7 @@ function HeroCtas() {
       <Link href="/cadastro/familia" className={heroButtonClass}>
         Sou família, buscar cuidador
       </Link>
-      <Link href="/cadastro/cuidador" className={heroButtonClass}>
+      <Link href="/cadastro/cuidador" className={heroOutlineButtonClass}>
         Sou cuidador, quero atender
       </Link>
     </div>

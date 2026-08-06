@@ -30,8 +30,12 @@ export const secondaryButtonClass =
 
 // Reserved for the standout calls-to-action the design spec singles out
 // (e.g. "Contratar", "Aceitar") -- not a general-purpose button variant.
+// text-white (not text-ink): under the "Editorial de Confiança" palette,
+// accent is a dark bordeaux (~27% lightness), so dark ink text on top of it
+// fails contrast (~1.6:1) -- this was text-ink under the previous, much
+// lighter amber accent, where dark text was the correct choice.
 export const accentButtonClass =
-  `rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-accent-dark motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;
+  `rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-dark motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;
 
 // Large marketing CTA (hero/final-CTA sections) -- primaryButtonClass is
 // sized for form submit buttons, too small for a landing page's main calls
@@ -40,13 +44,26 @@ export const accentButtonClass =
 export const heroButtonClass =
   `inline-flex w-full items-center justify-center rounded-lg bg-primary px-8 py-4 text-base font-semibold text-white transition hover:bg-primary-dark motion-reduce:transition-none sm:w-auto sm:text-lg ${focusRing}`;
 
+// Same size/shape as heroButtonClass but outlined instead of filled -- for
+// the hero's secondary CTA. Reverses the earlier "equal visual weight
+// between família/cuidador" decision (see CLAUDE.md "Identidade do site" /
+// "Sistema de design" for the reversal note): the "Editorial de Confiança"
+// direction wants one clear primary action per hero, not two competing
+// filled buttons.
+// hover:bg-ink/5 (not bg-primary-light): this button renders both on the
+// plain page background and inside the primary-light "CTA final" section --
+// a primary-light hover would be invisible on that second background, so a
+// background-independent dark tint is used instead.
+export const heroOutlineButtonClass =
+  `inline-flex w-full items-center justify-center rounded-lg border-2 border-ink bg-transparent px-8 py-4 text-base font-semibold text-ink transition hover:bg-ink/5 motion-reduce:transition-none sm:w-auto sm:text-lg ${focusRing}`;
+
 // Same size as heroButtonClass, accent color instead of primary -- for the
 // one action on a screen that should visually outrank everything else
 // (e.g. "Buscar cuidadores" on the family dashboard, the single most
-// important thing a family can do there). `text-ink` (not `text-white`)
-// matches accentButtonClass's contrast choice for the same background.
+// important thing a family can do there). `text-white` matches
+// accentButtonClass's contrast choice for the same (dark bordeaux) background.
 export const heroAccentButtonClass =
-  `inline-flex w-full items-center justify-center rounded-lg bg-accent px-8 py-4 text-base font-semibold text-ink transition hover:bg-accent-dark motion-reduce:transition-none sm:w-auto sm:text-lg ${focusRing}`;
+  `inline-flex w-full items-center justify-center rounded-lg bg-accent px-8 py-4 text-base font-semibold text-white transition hover:bg-accent-dark motion-reduce:transition-none sm:w-auto sm:text-lg ${focusRing}`;
 
 export const errorTextClass = "rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700";
 

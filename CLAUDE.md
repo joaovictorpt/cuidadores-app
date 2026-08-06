@@ -467,6 +467,14 @@ não uma porcentagem, pela mesma razão. Centralizado em `lib/ui.ts` (classes
 reutilizáveis) e `app/globals.css` (tokens do tema, via `@theme inline` — ver
 nota sobre Tailwind v4 abaixo).
 
+**Direção visual — "Editorial de Confiança"**: a paleta verde-petróleo/âmbar
+original (registrada logo abaixo só como histórico) foi substituída por esta
+segunda direção, importada de uma exploração feita no Claude Design com esse
+nome — serif de jornal, tons de bordô sobre papel quente. Aplicada em duas
+fases: **Fase A** (esta) trocou só a base — tokens de cor, tipografia de
+display, hierarquia dos CTAs do hero — sem tocar em componentes novos ou
+ajustes mais específicos de tela, que ficam para uma tarefa seguinte.
+
 **Paleta** (`app/globals.css`): tons claros/escuros de `primary` e `accent` 
 são derivados em HSL a partir do mesmo hue/saturation da cor base, variando 
 só a lightness — não são valores escolhidos à mão, pra formar uma família 
@@ -474,26 +482,39 @@ consistente.
 
 | Token Tailwind | Hex/HSL | Uso |
 |---|---|---|
-| `primary` | `#1F5C56` / `hsl(174 50% 24%)` | botões primários, links, ícones ativos |
-| `primary-dark` | `hsl(174 50% 18%)` | hover/active de botões primários |
-| `primary-light` | `hsl(174 50% 94%)` | tints sutis (badges, avatar placeholder) |
-| `accent` | `#E3A438` / `hsl(38 75% 55%)` | CTAs de destaque: "Contratar", "Aceitar" |
-| `accent-dark` | `hsl(38 75% 45%)` | hover/active de botões accent |
-| `accent-light` | `hsl(38 75% 92%)` | tints sutis |
-| `background` | `#F5F7F3` | fundo geral |
-| `ink` | `#1B2B2A` | texto principal |
-| `muted` | `#6B8783` | texto secundário, labels, bordas |
+| `primary` | `#1C1712` / `hsl(30 22% 9%)` | botões primários preenchidos — nesta direção é a mesma cor de `ink`, não uma cor de marca separada: o botão de destaque principal é escuro, não colorido |
+| `primary-dark` | `hsl(30 22% 5%)` | hover/active de botões primários |
+| `primary-light` | `hsl(30 22% 94%)` | tints sutis (badges, avatar placeholder) |
+| `accent` | `#6E1E42` / `hsl(333 57% 27%)` | bordô — reservado a um conjunto pequeno e deliberado de destaques: "Entrar", pílula ativa, anel de compatibilidade, CTAs de destaque ("Contratar", "Aceitar") |
+| `accent-dark` | `hsl(333 57% 17%)` | hover/active de botões accent |
+| `accent-light` | `hsl(333 57% 92%)` | tints sutis |
+| `background` | `#F7F3EC` | fundo geral (papel quente) |
+| `ink` | `#1C1712` | texto principal (quase-preto, tom quente) |
+| `muted` | `#6B645C` | texto secundário, labels, bordas |
 
-**Nota de nomenclatura**: o spec original chamava `#1B2B2A`/`#6B8783` de 
-"text-primary"/"text-secondary", mas isso colidiria com o token `primary` (a 
-cor de marca) — `bg-primary` e `text-primary` teriam significados diferentes 
-e incompatíveis (marca vs. texto). Renomeados para `ink`/`muted` pra eliminar 
-a ambiguidade; os valores hex são exatamente os pedidos.
+**Nota de nomenclatura**: o spec original chamava a cor de texto principal/
+secundário de "text-primary"/"text-secondary", mas isso colidiria com o
+token `primary` (a cor de marca) — `bg-primary` e `text-primary` teriam
+significados diferentes e incompatíveis (marca vs. texto). Renomeados para
+`ink`/`muted` pra eliminar a ambiguidade; os valores hex são exatamente os
+pedidos em cada direção visual.
+
+**Contraste — ajuste necessário na troca de paleta**: `accentButtonClass` e
+`heroAccentButtonClass` (`lib/ui.ts`) usavam `text-ink` sobre `bg-accent` —
+correto quando `accent` era o âmbar claro (`hsl(38 75% 55%)`) da direção
+anterior, mas quebrado com o bordô escuro atual (`hsl(333 57% 27%)`): texto
+quase-preto sobre bordô escuro cai pra ~1.6:1 de contraste. Trocado para
+`text-white` (~11:1) nos dois. O favicon (`app/icon.svg`) também precisou de
+ajuste manual — é uma cópia hardcoded do logo (`fill` fixo, não herda
+tokens CSS, ver "Identidade do site" abaixo) e ficou com o `primary` antigo
+até ser atualizado pra `#1C1712` nesta troca.
 
 **Tipografia**, via `next/font/google` em `app/layout.tsx` (self-hosted — 
 baixadas em build time, servidas pelo próprio domínio, sem request pro CDN do 
 Google em runtime):
-- `font-display` (Fraunces, peso 600-700): títulos/headings
+- `font-display` (Source Serif 4, peso 600-700): títulos/headings — trocada
+  da Fraunces original nesta mudança de direção, por ser uma serif mais
+  "clássica de jornal", mais alinhada à referência editorial
 - `font-sans` (Work Sans): corpo, labels, botões — é a fonte padrão do `body`
 - `font-mono` (JetBrains Mono): dados/números *exibidos* (preço, distância, 
   nota, % de match) — não usada em campos de formulário, só em valores já 
@@ -627,9 +648,18 @@ já está logado — não redireciona mais ninguém (ver "Navegação" acima par
 porquê e onde esse redirecionamento pós-login foi parar). Estrutura, de
 cima para baixo:
 - **Hero**: logo + nome + tagline + frase curta de proposta + os dois CTAs
-  lado a lado (`/cadastro/familia` e `/cadastro/cuidador`), com **hierarquia
-  visual idêntica** entre os dois (mesmo estilo/cor/tamanho) — nenhum é "mais 
-  importante" que o outro.
+  lado a lado (`/cadastro/familia` e `/cadastro/cuidador`). **Reversão da
+  decisão original**: os dois CTAs tinham hierarquia visual idêntica (mesmo
+  estilo/cor/tamanho, nenhum "mais importante" que o outro) — a direção
+  "Editorial de Confiança" (Fase A, ver "Sistema de design") pediu
+  explicitamente um botão preenchido ("Sou família, buscar cuidador",
+  `heroButtonClass`) e um só contornado ("Sou cuidador, quero atender",
+  `heroOutlineButtonClass`, novo em `lib/ui.ts`), priorizando famílias como
+  a ação principal do hero. O mesmo par se repete no CTA final da página. O
+  hover do botão contornado usa `bg-ink/5` (não `bg-primary-light`) porque
+  ele aparece tanto sobre o `background` da página quanto dentro da seção
+  final, que já é `bg-primary-light` — um tint de hover igual ao fundo
+  ficaria invisível ali.
 - **Como funciona**: 3 passos com ícone (`lucide-react`), conectados 
   visualmente pelo mesmo `ConnectionLine` já usado em `/buscar` e 
   `/match-recomendado` (reforça a metáfora de "conexão" da tagline). O 

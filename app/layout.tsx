@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, JetBrains_Mono, Work_Sans } from "next/font/google";
+import { JetBrains_Mono, Source_Serif_4, Work_Sans } from "next/font/google";
 import "./globals.css";
 
 import { SiteHeader } from "@/app/components/site-header";
@@ -8,10 +8,10 @@ import { siteConfig } from "@/lib/site-config";
 // Self-hosted via next/font (downloaded at build time, served from our own
 // domain — no runtime request to Google's CDN). See CLAUDE.md "Sistema de
 // design" for why these three specific fonts were chosen.
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const sourceSerif4 = Source_Serif_4({
+  variable: "--font-source-serif-4",
   subsets: ["latin", "latin-ext"],
-  weight: ["400", "600", "700"],
+  weight: ["600", "700"],
 });
 
 const workSans = Work_Sans({
@@ -40,7 +40,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${fraunces.variable} ${workSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${sourceSerif4.variable} ${workSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background font-sans text-ink">
         <SiteHeader />

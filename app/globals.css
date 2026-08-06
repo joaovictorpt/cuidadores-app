@@ -8,22 +8,25 @@
      shades are derived from the same hue+saturation as the base color,
      only varying lightness, so they read as one consistent family instead
      of arbitrary picks. */
-  --color-primary: hsl(174 50% 24%); /* #1F5C56 */
-  --color-primary-dark: hsl(174 50% 18%); /* hover/active on primary buttons */
-  --color-primary-light: hsl(174 50% 94%); /* subtle tints: card accents, badges */
+  --color-primary: hsl(30 22% 9%); /* #1C1712 -- same tone as ink; solid dark buttons */
+  --color-primary-dark: hsl(30 22% 5%); /* hover/active on primary buttons */
+  --color-primary-light: hsl(30 22% 94%); /* subtle tints: card accents, badges */
 
-  --color-accent: hsl(38 75% 55%); /* #E3A438 */
-  --color-accent-dark: hsl(38 75% 45%); /* hover/active on accent buttons */
-  --color-accent-light: hsl(38 75% 92%); /* subtle tints */
+  /* Bordeaux: reserved for a small set of deliberately singled-out spots
+     ("Entrar", the active pill/tab, the compatibility ring) -- not a
+     general accent to sprinkle everywhere. */
+  --color-accent: hsl(333 57% 27%); /* #6E1E42 -- bordeaux */
+  --color-accent-dark: hsl(333 57% 17%); /* hover/active on accent buttons */
+  --color-accent-light: hsl(333 57% 92%); /* subtle tints */
 
-  --color-background: #f5f7f3;
-  --color-ink: #1b2b2a;
-  --color-muted: #6b8783;
+  --color-background: #f7f3ec;
+  --color-ink: #1c1712;
+  --color-muted: #6b645c;
 
   /* Card corner radius: moderate, not square, not a pill (12-16px range). */
   --radius-card: 0.875rem;
 
-  --font-display: var(--font-fraunces);
+  --font-display: var(--font-source-serif-4);
   --font-sans: var(--font-work-sans);
   --font-mono: var(--font-jetbrains-mono);
 }
