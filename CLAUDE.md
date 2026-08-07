@@ -310,11 +310,24 @@ essa inconsistência uma vez.
   reviews), `caregiverCapacity` (3, usado pelo Gale-Shapley).
 - `lib/haversine.ts`: distância em linha reta entre duas coordenadas.
 - `lib/matching.ts`:
-  - `findCandidateCaregivers` / `isEligiblePair`: filtra por raio máximo +
-    overlap de `careTypes`/`neededCareTypes`.
+  - `findCandidateCaregivers` / `findCandidateFamilies` / `isEligiblePair`:
+    filtra por raio máximo + overlap de `careTypes`/`neededCareTypes`.
+    `findCandidateFamilies` é genérica (`<F extends FamilyForMatching>`) pra
+    funcionar tanto com o `FamilyCandidate` mínimo (Gale-Shapley só precisa
+    do `userId` de volta) quanto com o `FamilyForDisplay` mais rico (busca
+    do cuidador, que também precisa mostrar nome/cidade/estado).
   - `computeMatchScore`: soma ponderada (*weighted sum model*) dos 4
     critérios normalizados para 0-1 cada.
   - `rankCaregiversForFamily`: busca real usada em `GET /api/search/caregivers`.
+  - `rankFamiliesForCaregiver`: o mesmo do outro lado do grafo, busca real
+    usada em `GET /api/search/families` (ver "Busca de famílias pelo
+    cuidador" abaixo). Por baixo, tanto essa função quanto
+    `buildCaregiverPreferences` (Gale-Shapley) chamam o mesmo núcleo
+    síncrono `rankFamiliesAgainstList` — extraído de dentro do loop de
+    `buildCaregiverPreferences`, que antes tinha essa lógica inline
+    duplicada em relação ao que a busca do cuidador precisava, espelhando
+    o par `rankCaregiversAgainstList`/`rankCaregiversForFamily` que já
+    existia do lado família.
   - `buildFamilyPreferences` / `buildCaregiverPreferences`: listas de
     preferência para o Gale-Shapley, reaproveitando a mesma fórmula de score
     nos dois sentidos (consequência: do lado do cuidador, `rating` e `price`
@@ -328,12 +341,56 @@ essa inconsistência uma vez.
   resultado da família logada. Comentário no código aponta que recalcular
   tudo a cada requisição não escala — candidato a cache/job assíncrono se o
   volume de usuários crescer.
+- `GET /api/matching/stable-match/caregiver`: mesma ideia, lado cuidador —
+  rota separada (não um parâmetro na rota existente) pra manter o
+  comportamento já testado do lado família intocado. Roda o mesmo
+  `runStableMatchingForAllFamilies()` e devolve `matchesByCaregiver.get(<id
+  do cuidador logado>)`. Diferença importante em relação ao lado família:
+  como `caregiverCapacity` é 3, a resposta é uma lista de **0 a 3**
+  famílias, não um resultado único. Mesma decisão de não inventar
+  `distanceKm`/`matchScore` que o lado família já toma (Gale-Shapley não
+  produz um score 0-1 comparável — ver "Changelog de decisões" abaixo) e
+  mesmo formato limitado por privacidade da busca (sem `address`, ver a
+  seguir).
 - Scripts de teste permanentes: `scripts/test-matching.ts` e
   `scripts/test-gale-shapley.ts` (rodam com `tsx`, criam dados fictícios,
   imprimem resultado para inspeção manual, limpam ao final). O de
   Gale-Shapley inclui um verificador de pares bloqueantes independente, que
   re-deriva estabilidade a partir das listas de preferência brutas em vez de
   confiar no bookkeeping interno do algoritmo.
+
+## Busca de famílias pelo cuidador
+
+`GET /api/search/families` (`app/api/search/families/route.ts`) é o
+espelho de `GET /api/search/caregivers` do outro lado do marketplace —
+mesma estrutura (401 sem sessão, 403 se `role !== CAREGIVER`, 400 com
+`reason: "incomplete_profile"` se o cuidador não tiver
+`latitude`/`longitude` ou `careTypes` vazio), usando `rankFamiliesForCaregiver`
+(`lib/matching.ts`) por baixo.
+
+**Limitado por privacidade, de propósito**: o tipo `FamilyForDisplay`
+(`lib/matching.ts`) — a forma de `family` dentro do `RankedFamily` que
+`rankFamiliesForCaregiver` retorna — carrega só `userId`, `name` (de
+`User`), `city`, `state`, `latitude`/`longitude` (usadas para calcular
+`distanceKm`, nunca devolvidas cruas) e `neededCareTypes`, mas **nunca
+`address`** (o endereço completo da família, armazenado em
+`FamilyProfile.address`). Isso não é um descuido nem um esquecimento de
+campo: `FamilyForDisplay` simplesmente não carrega `address` nenhuma — não
+tem como um consumidor futuro vazar esse dado por engano, porque o tipo não
+o expõe. `GET /api/search/families` monta a resposta final a partir disso
+(`familyId`, `name`, `city`, `state`, `neededCareTypes`, mais `distanceKm`/
+`matchScore` calculados por `rankFamiliesForCaregiver`).
+`GET /api/matching/stable-match/caregiver` usa o mesmo subconjunto de
+campos privacy-safe, mas busca os perfis direto via Prisma (não passa por
+`rankFamiliesForCaregiver`) e por isso **não** inclui `distanceKm`/
+`matchScore` — mesma razão já documentada para o lado família em
+`GET /api/matching/stable-match`: Gale-Shapley não produz um score 0-1
+comparável, então não há o que calcular ali. Diferente do lado família (que
+já vê o cuidador por inteiro, já que cuidador não tem endereço de casa
+armazenado — ver "Geolocalização"), a família tem um endereço residencial
+real, e o cuidador só precisa saber cidade/estado/distância pra decidir se
+quer se candidatar — não o endereço exato antes de qualquer contato ter
+sido aceito.
 
 ## Changelog de decisões
 
@@ -361,14 +418,49 @@ essa inconsistência uma vez.
 Implementado como uma máquina de estados sobre o model `Hire` já existente no 
 schema (`prisma/schema.prisma`), com as regras centralizadas em 
 `lib/hire-transitions.ts` (única fonte de verdade, usada tanto pela API quanto 
-pelas páginas do dashboard, pra evitar que as duas divirjam):
+pelas páginas do dashboard, pra evitar que as duas divirjam).
 
-- `PENDING → ACCEPTED` (só o cuidador)
-- `PENDING → REJECTED` (só o cuidador)
-- `PENDING → CANCELLED` (só a família)
-- `ACCEPTED → COMPLETED` (só o cuidador)
-- `ACCEPTED → CANCELLED` (só a família)
-- Qualquer outra transição é rejeitada pela API (`PATCH /api/hires/[id]`) com 400.
+**Marketplace bidirecional (Fase 1 — só backend)**: originalmente só a 
+família podia iniciar um `Hire` (o cuidador só respondia). Agora os dois 
+lados podem iniciar contato — a família "contrata", o cuidador demonstra 
+"tenho interesse". `Hire.initiatedBy` (`HireInitiator`: `FAMILY` | 
+`CAREGIVER`, novo enum) registra quem deu o primeiro passo; linhas criadas 
+antes desse campo existir têm `@default(FAMILY)` na migration (única 
+leitura possível, já que só famílias podiam iniciar até então). **Ainda não 
+há tela nova para o cuidador iniciar contato** — só a API já aceita, o 
+fluxo completo (busca de famílias + botão "Tenho interesse" no dashboard do 
+cuidador) fica pra uma fase seguinte.
+
+**Quem pode agir em cada transição depende de quem iniciou**: o lado que 
+propôs o `Hire` é quem pode desistir dele enquanto ainda está `PENDING`; o 
+outro lado (quem recebeu o convite) é quem decide aceitar ou recusar. Uma 
+vez `ACCEPTED`, as regras voltam a ser fixas — independem de quem iniciou, 
+porque nesse ponto os papéis já são naturais: o cuidador é sempre quem 
+presta o serviço (só ele confirma conclusão) e a família é sempre quem 
+recebe o cuidado (só ela pode recuar de um `ACCEPTED`).
+
+| Transição | Iniciado pela família | Iniciado pelo cuidador |
+|---|---|---|
+| `PENDING → ACCEPTED` | só o cuidador (responde) | só a família (responde) |
+| `PENDING → REJECTED` | só o cuidador (responde) | só a família (responde) |
+| `PENDING → CANCELLED` | só a família (desiste) | só o cuidador (desiste) |
+| `ACCEPTED → COMPLETED` | só o cuidador | só o cuidador |
+| `ACCEPTED → CANCELLED` | só a família | só a família |
+
+Qualquer outra transição é rejeitada pela API (`PATCH /api/hires/[id]`) com 
+400. `VALID_HIRE_TRANSITIONS` em `lib/hire-transitions.ts` é literalmente 
+essa tabela (uma entrada por `HireInitiator`, com as duas últimas linhas — 
+que não variam — compartilhando o mesmo objeto `ACCEPTED_TRANSITIONS` em 
+vez de duplicado, pra não divergirem por acidente); `isValidHireTransition` 
+e `getAvailableActions` ganharam um parâmetro `initiatedBy` a mais.
+
+**`POST /api/hires` aceita os dois papéis como iniciador** — o corpo da 
+requisição muda de acordo com a `session.user.role`, não com um campo 
+explícito: família manda `{ caregiverId }` (cria com `initiatedBy: FAMILY`, 
+como sempre foi), cuidador manda `{ familyId }` (cria com 
+`initiatedBy: CAREGIVER`, novo). Os dois caminhos convergem pra uma única 
+função interna (`createHire`) que faz a checagem de solicitação ativa + o 
+`prisma.hire.create` — evita duplicar essa lógica entre os dois branches.
 
 **Regra de uma solicitação ativa por par família-cuidador**: não pode existir 
 mais de um `Hire` com status `PENDING` ou `ACCEPTED` entre a mesma família e o 
@@ -378,7 +470,9 @@ condition, uma constraint `UNIQUE` real no banco sobre o campo
 `Hire.activeHireKey` (`"<familyId>:<caregiverId>"` enquanto ativo, `null` 
 quando o Hire chega num estado terminal — Postgres trata múltiplos `NULL` 
 como não-conflitantes, então isso permite um novo `Hire` depois que o anterior 
-termina).
+termina). A chave continua montada só a partir do par família+cuidador, 
+**independente de quem iniciou** — a regra de "uma solicitação ativa por vez" 
+vale igual nos dois sentidos.
 
 Este `Hire` é o pré-requisito do sistema de `Review` que vem a seguir: só faz 
 sentido uma família avaliar um cuidador (ou vice-versa) depois de um `Hire` 

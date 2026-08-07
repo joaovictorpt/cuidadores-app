@@ -1,4 +1,4 @@
-import { CareType, FamilyProfile } from "@prisma/client";
+import { CareType, CaregiverProfile, FamilyProfile } from "@prisma/client";
 
 import { stableMatching } from "@/lib/gale-shapley";
 import { haversineDistanceKm } from "@/lib/haversine";
@@ -36,6 +36,23 @@ export type FamilyCandidate = FamilyForMatching & {
 
 export type RankedCaregiver = {
   caregiver: CaregiverForMatching;
+  distanceKm: number;
+  matchScore: number;
+};
+
+// FamilyCandidate plus the fields needed to actually show a family to a
+// caregiver (rankFamiliesForCaregiver / GET /api/search/families). Notably
+// missing: `address` -- full street address is never exposed to a
+// caregiver browsing/matched-with families, only city/state (see CLAUDE.md
+// "Busca de famílias pelo cuidador").
+export type FamilyForDisplay = FamilyCandidate & {
+  name: string | null;
+  city: string | null;
+  state: string | null;
+};
+
+export type RankedFamily<F extends FamilyCandidate = FamilyCandidate> = {
+  family: F;
   distanceKm: number;
   matchScore: number;
 };
@@ -83,10 +100,15 @@ export function findCandidateCaregivers(
   );
 }
 
-export function findCandidateFamilies(
+// Generic over F so it works both with the minimal FamilyCandidate (Gale-
+// Shapley preference building, which only needs the userId back) and with
+// richer display-oriented shapes like FamilyForDisplay (rankFamiliesForCaregiver,
+// which also needs name/city/state to show) -- the filter preserves
+// whatever shape it's given.
+export function findCandidateFamilies<F extends FamilyForMatching>(
   caregiver: CaregiverForMatching,
-  allFamilies: FamilyCandidate[]
-): FamilyCandidate[] {
+  allFamilies: F[]
+): F[] {
   return allFamilies.filter((familyProfile) =>
     isEligiblePair(familyProfile, caregiver)
   );
@@ -185,6 +207,46 @@ function rankCaregiversAgainstList(
   return ranked;
 }
 
+// Mirrors rankCaregiversAgainstList's role, but for the other direction of
+// the bipartite graph: pure, synchronous core shared by
+// buildCaregiverPreferences (many caregivers, ranking each against all
+// families for Gale-Shapley preference lists) and rankFamiliesForCaregiver
+// (single caregiver, fetches its own data from Prisma). Generic over F so
+// callers can pass either the minimal FamilyCandidate (Gale-Shapley only
+// needs userId back) or the richer FamilyForDisplay (search needs
+// name/city/state too) and get that same shape back on `family`.
+function rankFamiliesAgainstList<F extends FamilyCandidate>(
+  caregiver: CaregiverForMatching,
+  allFamilies: F[],
+  allCaregivers: CaregiverForMatching[]
+): RankedFamily<F>[] {
+  const eligibleFamilies = findCandidateFamilies(caregiver, allFamilies);
+
+  const ranked = eligibleFamilies.map((family) => {
+    const distanceKm = haversineDistanceKm(
+      family.latitude!,
+      family.longitude!,
+      caregiver.latitude!,
+      caregiver.longitude!
+    );
+    // Reuse that family's own eligible-caregiver pool for price
+    // normalization, so the price component means the same thing here
+    // as it would in that family's own search -- computeMatchScore's
+    // `allCandidates` argument only ever affects the price score.
+    const candidatesForThisFamily = findCandidateCaregivers(
+      family,
+      allCaregivers
+    );
+    const matchScore = computeMatchScore(family, caregiver, candidatesForThisFamily);
+
+    return { family, distanceKm, matchScore };
+  });
+
+  ranked.sort((a, b) => b.matchScore - a.matchScore);
+
+  return ranked;
+}
+
 function toCaregiverForMatching(profile: {
   id: string;
   userId: string;
@@ -242,6 +304,62 @@ export async function rankCaregiversForFamily(
   return rankCaregiversAgainstList(family, allCaregivers);
 }
 
+async function fetchAllFamiliesForDisplay(): Promise<FamilyForDisplay[]> {
+  const familyProfiles = await prisma.familyProfile.findMany({
+    include: { user: { select: { name: true } } },
+  });
+
+  return familyProfiles.map((profile) => ({
+    userId: profile.userId,
+    name: profile.user.name,
+    city: profile.city,
+    state: profile.state,
+    latitude: profile.latitude,
+    longitude: profile.longitude,
+    neededCareTypes: profile.neededCareTypes,
+  }));
+}
+
+// Mirrors rankCaregiversForFamily on the other side of the graph: the
+// search used by GET /api/search/families. Returns FamilyForDisplay (no
+// `address`, see that type's comment) -- a caregiver browsing families
+// never gets a family's full street address, only city/state, distance,
+// and what they're looking for.
+export async function rankFamiliesForCaregiver(
+  caregiverProfile: CaregiverProfile
+): Promise<RankedFamily<FamilyForDisplay>[]> {
+  const user = await prisma.user.findUnique({
+    where: { id: caregiverProfile.userId },
+    select: { name: true, reviewsReceived: { select: { rating: true } } },
+  });
+
+  const ratings = user?.reviewsReceived.map((review) => review.rating) ?? [];
+  const { average: averageRating, total: reviewCount } =
+    calculateAverageRating(ratings);
+
+  const caregiver: CaregiverForMatching = {
+    id: caregiverProfile.id,
+    userId: caregiverProfile.userId,
+    name: user?.name ?? null,
+    bio: caregiverProfile.bio,
+    hourlyRate: caregiverProfile.hourlyRate
+      ? Number(caregiverProfile.hourlyRate)
+      : null,
+    careTypes: caregiverProfile.careTypes,
+    latitude: caregiverProfile.latitude,
+    longitude: caregiverProfile.longitude,
+    averageRating,
+    reviewCount,
+  };
+
+  const [allFamilies, allCaregivers] = await Promise.all([
+    fetchAllFamiliesForDisplay(),
+    fetchAllCaregiversForMatching(),
+  ]);
+
+  return rankFamiliesAgainstList(caregiver, allFamilies, allCaregivers);
+}
+
 // For each family, the caregivers eligible for them ranked by
 // computeMatchScore -- this is exactly what rankCaregiversForFamily
 // computes for one family, reused here (as a synchronous helper, since the
@@ -280,26 +398,11 @@ export function buildCaregiverPreferences(
   const preferences = new Map<string, string[]>();
 
   for (const caregiver of caregivers) {
-    const eligibleFamilies = findCandidateFamilies(caregiver, families);
-
-    const scored = eligibleFamilies.map((family) => {
-      // Reuse that family's own eligible-caregiver pool for price
-      // normalization, so the price component means the same thing here
-      // as it would in that family's own search -- computeMatchScore's
-      // `allCandidates` argument only ever affects the price score.
-      const candidatesForThisFamily = findCandidateCaregivers(
-        family,
-        caregivers
-      );
-      const score = computeMatchScore(family, caregiver, candidatesForThisFamily);
-      return { familyUserId: family.userId, score };
-    });
-
-    scored.sort((a, b) => b.score - a.score);
+    const ranked = rankFamiliesAgainstList(caregiver, families, caregivers);
 
     preferences.set(
       caregiver.userId,
-      scored.map((entry) => entry.familyUserId)
+      ranked.map((entry) => entry.family.userId)
     );
   }
 

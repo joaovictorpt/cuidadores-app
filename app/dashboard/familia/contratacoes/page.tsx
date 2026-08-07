@@ -43,7 +43,11 @@ export default async function ContratacoesPage() {
 
         <div className="space-y-4">
           {hires.map((hire) => {
-            const actions = getAvailableActions(hire.status, Role.FAMILY);
+            const actions = getAvailableActions(
+              hire.status,
+              Role.FAMILY,
+              hire.initiatedBy
+            );
 
             return (
               <div

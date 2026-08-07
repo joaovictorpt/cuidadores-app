@@ -57,7 +57,14 @@ export async function PATCH(
 
   const nextStatus = parsed.data.status;
 
-  if (!isValidHireTransition(hire.status, nextStatus, session.user.role)) {
+  if (
+    !isValidHireTransition(
+      hire.status,
+      nextStatus,
+      session.user.role,
+      hire.initiatedBy
+    )
+  ) {
     return NextResponse.json(
       {
         error: `Não é possível mudar de ${hire.status} para ${nextStatus} com o seu perfil`,

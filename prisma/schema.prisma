@@ -156,6 +156,12 @@ model Hire {
   caregiver   User       @relation("HireCaregiver", fields: [caregiverId], references: [id])
 
   status      HireStatus @default(PENDING)
+  // Who reached out first -- determines which side is "proposing" (can
+  // withdraw a still-PENDING request) vs "responding" (can accept/reject
+  // it). See lib/hire-transitions.ts. Defaults to FAMILY so every Hire row
+  // created before this field existed (only families could initiate then)
+  // keeps its correct historical meaning without a data migration.
+  initiatedBy HireInitiator @default(FAMILY)
   message     String?
   startDate   DateTime?
   endDate     DateTime?
@@ -181,6 +187,11 @@ enum HireStatus {
   REJECTED
   COMPLETED
   CANCELLED
+}
+
+enum HireInitiator {
+  FAMILY
+  CAREGIVER
 }
 
 model Review {
