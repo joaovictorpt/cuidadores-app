@@ -404,11 +404,13 @@ async function seedHires(
 function printCredentialsTable() {
   const rows = [
     ...FAMILY_SEEDS.map((seed) => ({
+      Nome: seed.name,
       Email: seed.email,
       Senha: DEMO_PASSWORD,
       Role: "FAMILY",
     })),
     ...CAREGIVER_SEEDS.map((seed) => ({
+      Nome: seed.name,
       Email: seed.email,
       Senha: DEMO_PASSWORD,
       Role: "CAREGIVER",

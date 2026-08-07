@@ -456,3 +456,46 @@ export async function findMatchedCaregiverForFamily(
 
   return null;
 }
+
+// Privacy-limited shape for a family matched to a caregiver via stable
+// matching -- same field set as GET /api/search/families (no `address`,
+// see FamilyForDisplay), but without `distanceKm`/`matchScore` since
+// Gale-Shapley doesn't produce a comparable 0-1 score the way the weighted
+// search does (same reasoning as the family-side stable-match route).
+export type MatchedFamilyForCaregiver = {
+  familyId: string;
+  name: string | null;
+  city: string | null;
+  state: string | null;
+  neededCareTypes: CareType[];
+};
+
+// Mirrors findMatchedCaregiverForFamily on the other side of the graph --
+// shared by GET /api/matching/stable-match/caregiver and
+// /dashboard/cuidador/match-perfeito, so the "which families did I get
+// matched with" lookup only lives in one place. Unlike the family side
+// (capacity 1), a caregiver can hold up to matchingConfig.caregiverCapacity
+// families at once, so this returns 0 to that many entries.
+export async function findMatchedFamiliesForCaregiver(
+  caregiverUserId: string
+): Promise<MatchedFamilyForCaregiver[]> {
+  const matchesByCaregiver = await runStableMatchingForAllFamilies();
+  const matchedFamilyUserIds = matchesByCaregiver.get(caregiverUserId) ?? [];
+
+  if (matchedFamilyUserIds.length === 0) {
+    return [];
+  }
+
+  const familyProfiles = await prisma.familyProfile.findMany({
+    where: { userId: { in: matchedFamilyUserIds } },
+    include: { user: { select: { name: true } } },
+  });
+
+  return familyProfiles.map((profile) => ({
+    familyId: profile.userId,
+    name: profile.user.name,
+    city: profile.city,
+    state: profile.state,
+    neededCareTypes: profile.neededCareTypes,
+  }));
+}

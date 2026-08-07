@@ -65,6 +65,13 @@ export const heroOutlineButtonClass =
 export const heroAccentButtonClass =
   `inline-flex w-full items-center justify-center rounded-lg bg-accent px-8 py-4 text-base font-semibold text-white transition hover:bg-accent-dark motion-reduce:transition-none sm:w-auto sm:text-lg ${focusRing}`;
 
+// Discreet secondary metadata on a card (relative timestamps, direction
+// badges) -- small and muted on purpose, so it never competes with a
+// card's primary content (name, status, price). Not font-mono: unlike a
+// verified numeric datum (price, distance, rating), a relative-time phrase
+// ("há 5 minutos") reads as prose, not data.
+export const metaTextClass = "text-xs text-muted";
+
 export const errorTextClass = "rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700";
 
 export const successTextClass = "rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700";

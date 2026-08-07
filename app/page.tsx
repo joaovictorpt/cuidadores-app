@@ -135,7 +135,7 @@ export default function HomePage() {
       {/* CTA FINAL */}
       <section className="bg-primary-light px-4 py-16 text-center sm:py-20">
         <h2 className="font-display text-2xl font-semibold text-ink sm:text-3xl">
-          Pronto para começar?
+          Pronto(a) para começar?
         </h2>
         <HeroCtas />
       </section>

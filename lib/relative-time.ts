@@ -1,0 +1,42 @@
+const MINUTE = 60;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const WEEK = 7 * DAY;
+const MONTH = 30 * DAY;
+const YEAR = 365 * DAY;
+
+// Discreet "há X" phrasing for Hire.createdAt in the contratações/
+// solicitações lists -- secondary metadata, not meant to compete with the
+// card's primary content, so a relative phrase reads faster than a full
+// date. Takes `now` as a parameter (defaulting to the real clock) so it
+// stays testable without mocking global Date.
+export function formatRelativeTime(date: Date, now: Date = new Date()): string {
+  const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffSeconds < MINUTE) {
+    return "agora mesmo";
+  }
+  if (diffSeconds < HOUR) {
+    const minutes = Math.floor(diffSeconds / MINUTE);
+    return `há ${minutes} minuto${minutes === 1 ? "" : "s"}`;
+  }
+  if (diffSeconds < DAY) {
+    const hours = Math.floor(diffSeconds / HOUR);
+    return `há ${hours} hora${hours === 1 ? "" : "s"}`;
+  }
+  if (diffSeconds < WEEK) {
+    const days = Math.floor(diffSeconds / DAY);
+    return `há ${days} dia${days === 1 ? "" : "s"}`;
+  }
+  if (diffSeconds < MONTH) {
+    const weeks = Math.floor(diffSeconds / WEEK);
+    return `há ${weeks} semana${weeks === 1 ? "" : "s"}`;
+  }
+  if (diffSeconds < YEAR) {
+    const months = Math.floor(diffSeconds / MONTH);
+    return `há ${months} mês${months === 1 ? "" : "es"}`;
+  }
+
+  const years = Math.floor(diffSeconds / YEAR);
+  return `há ${years} ano${years === 1 ? "" : "s"}`;
+}

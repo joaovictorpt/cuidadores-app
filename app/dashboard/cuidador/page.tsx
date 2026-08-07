@@ -7,7 +7,7 @@ import { LogoutButton } from "@/app/dashboard/_components/logout-button";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { calculateAverageRating } from "@/lib/reviews";
-import { contentCardClass } from "@/lib/ui";
+import { contentCardClass, heroAccentButtonClass, heroOutlineButtonClass } from "@/lib/ui";
 
 export default async function DashboardCuidadorPage() {
   const session = await getServerSession(authOptions);
@@ -41,9 +41,21 @@ export default async function DashboardCuidadorPage() {
     <main className="min-h-screen bg-background px-4 py-12">
       <div className="mx-auto max-w-2xl">
         <h1 className="mb-1 font-display text-3xl font-semibold text-ink">
-          Bem-vindo, {session.user.name || session.user.email}
+          Bem-vindo(a), {session.user.name || session.user.email}
         </h1>
         <p className="mb-6 text-sm text-muted">Painel de controle do cuidador</p>
+
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+          <Link href="/dashboard/cuidador/buscar" className={heroAccentButtonClass}>
+            Buscar famílias
+          </Link>
+          <Link
+            href="/dashboard/cuidador/match-perfeito"
+            className={heroOutlineButtonClass}
+          >
+            Match perfeito
+          </Link>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Link
@@ -84,7 +96,7 @@ export default async function DashboardCuidadorPage() {
             </h2>
             <p className="mt-1 text-sm text-muted">
               {documentCount === 0
-                ? "Nenhum documento enviado ainda -- envie para começar a ser verificado"
+                ? "Nenhum documento enviado ainda -- envie para começar a ser verificado(a)"
                 : `${documentCount} documento${documentCount === 1 ? "" : "s"} enviado${documentCount === 1 ? "" : "s"}`}
             </p>
           </Link>

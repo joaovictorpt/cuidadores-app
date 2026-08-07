@@ -42,7 +42,7 @@ export default async function DashboardFamiliaPage() {
     <main className="min-h-screen bg-background px-4 py-12">
       <div className="mx-auto max-w-2xl">
         <h1 className="mb-1 font-display text-3xl font-semibold text-ink">
-          Bem-vindo, {session.user.name || session.user.email}
+          Bem-vindo(a), {session.user.name || session.user.email}
         </h1>
         <p className="mb-6 text-sm text-muted">Painel de controle da família</p>
 

@@ -6,8 +6,14 @@ import { BackLink } from "@/app/dashboard/_components/back-link";
 import { HireActionButton } from "@/app/dashboard/_components/hire-action-button";
 import { authOptions } from "@/lib/auth";
 import { getAvailableActions } from "@/lib/hire-transitions";
-import { HIRE_ACTION_LABELS, HIRE_STATUS_LABELS } from "@/lib/hire-labels";
+import {
+  getHireDirectionLabel,
+  HIRE_ACTION_LABELS,
+  HIRE_STATUS_LABELS,
+} from "@/lib/hire-labels";
 import { prisma } from "@/lib/prisma";
+import { formatRelativeTime } from "@/lib/relative-time";
+import { metaTextClass } from "@/lib/ui";
 
 export default async function SolicitacoesPage() {
   const session = await getServerSession(authOptions);
@@ -28,12 +34,12 @@ export default async function SolicitacoesPage() {
         <BackLink href="/dashboard/cuidador" />
 
         <h1 className="mb-6 font-display text-3xl font-semibold text-ink">
-          Solicitações recebidas
+          Minhas solicitações
         </h1>
 
         {hires.length === 0 && (
           <p className="text-sm text-muted">
-            Você ainda não recebeu nenhuma solicitação.
+            Você ainda não tem nenhuma solicitação.
           </p>
         )}
 
@@ -58,9 +64,17 @@ export default async function SolicitacoesPage() {
                     {hire.message && (
                       <p className="mt-1 text-sm text-muted">{hire.message}</p>
                     )}
-                    <p className="mt-1 font-mono text-xs text-muted">
-                      Solicitado em {hire.createdAt.toLocaleDateString("pt-BR")}
-                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="rounded-full border border-muted/30 px-2 py-0.5 text-xs text-muted">
+                        {getHireDirectionLabel(hire.initiatedBy, Role.CAREGIVER)}
+                      </span>
+                      <span
+                        className={metaTextClass}
+                        title={hire.createdAt.toLocaleString("pt-BR")}
+                      >
+                        {formatRelativeTime(hire.createdAt)}
+                      </span>
+                    </div>
                   </div>
                   <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 text-sm font-medium text-primary">
                     {HIRE_STATUS_LABELS[hire.status]}

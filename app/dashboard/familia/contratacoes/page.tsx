@@ -7,8 +7,14 @@ import { HireActionButton } from "@/app/dashboard/_components/hire-action-button
 import { ReviewForm } from "@/app/dashboard/familia/_components/review-form";
 import { authOptions } from "@/lib/auth";
 import { getAvailableActions } from "@/lib/hire-transitions";
-import { HIRE_ACTION_LABELS, HIRE_STATUS_LABELS } from "@/lib/hire-labels";
+import {
+  getHireDirectionLabel,
+  HIRE_ACTION_LABELS,
+  HIRE_STATUS_LABELS,
+} from "@/lib/hire-labels";
 import { prisma } from "@/lib/prisma";
+import { formatRelativeTime } from "@/lib/relative-time";
+import { metaTextClass } from "@/lib/ui";
 
 export default async function ContratacoesPage() {
   const session = await getServerSession(authOptions);
@@ -59,9 +65,17 @@ export default async function ContratacoesPage() {
                     <h2 className="font-display text-lg font-semibold text-ink">
                       {hire.caregiver.name ?? hire.caregiver.email}
                     </h2>
-                    <p className="mt-1 font-mono text-xs text-muted">
-                      Solicitado em {hire.createdAt.toLocaleDateString("pt-BR")}
-                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="rounded-full border border-muted/30 px-2 py-0.5 text-xs text-muted">
+                        {getHireDirectionLabel(hire.initiatedBy, Role.FAMILY)}
+                      </span>
+                      <span
+                        className={metaTextClass}
+                        title={hire.createdAt.toLocaleString("pt-BR")}
+                      >
+                        {formatRelativeTime(hire.createdAt)}
+                      </span>
+                    </div>
                   </div>
                   <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 text-sm font-medium text-primary">
                     {HIRE_STATUS_LABELS[hire.status]}

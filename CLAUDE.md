@@ -392,6 +392,71 @@ real, e o cuidador só precisa saber cidade/estado/distância pra decidir se
 quer se candidatar — não o endereço exato antes de qualquer contato ter
 sido aceito.
 
+`findMatchedFamiliesForCaregiver` (`lib/matching.ts`) espelha
+`findMatchedCaregiverForFamily` do outro lado: extrai o lookup "quais
+famílias esse cuidador recebeu no Gale-Shapley" pra um só lugar,
+compartilhado por `GET /api/matching/stable-match/caregiver` e por
+`/dashboard/cuidador/match-perfeito` (Fase 2, abaixo) — nenhum dos dois
+reimplementa a busca em `matchesByCaregiver`.
+
+## Telas do cuidador — busca e match perfeito (Fase 2)
+
+Duas páginas novas, espelhando as equivalentes do lado família tela por
+tela (mesma estrutura, mesmos componentes reaproveitados de
+`app/dashboard/familia/_components/` — `AvatarPlaceholder`,
+`MatchScoreRing`, `ConnectionLine` — importados de lá em vez de movidos,
+mesmo padrão já usado pela home page, ver "Identidade do site"):
+
+- **`/dashboard/cuidador/buscar`** (`app/dashboard/cuidador/buscar/page.tsx`)
+  espelha `/dashboard/familia/buscar`: Server Component chamando
+  `rankFamiliesForCaregiver`, barra-resumo somente-leitura (tipos de
+  cuidado que o cuidador atende + cidade/estado, com link "Editar perfil"),
+  aviso de perfil incompleto (endereço ou `careTypes` vazio) igual ao
+  padrão já usado do outro lado. A lista de resultados
+  (`app/dashboard/cuidador/buscar/_components/family-results.tsx`,
+  `FamilyResults`, Client Component) é o par de `CaregiverResults`, mas
+  com **só 2 pílulas de ordenação** ("Mais próximo", "Mais compatível") em
+  vez de 3 — `FamilyForDisplay` não carrega nenhuma nota de avaliação
+  (famílias não são avaliadas nesta versão, ver "Sistema de Review"), então
+  uma pílula "Melhor avaliação" não teria um campo real pra ordenar;
+  inventar um valor pra preencher essa lacuna quebraria a mesma regra que
+  já vale para `MatchScoreRing`/`ConnectionLine` ("nunca fabricar um número
+  que pareça real sem ser"). Cada card mostra `MatchScoreRing` com o
+  `matchScore` real, cidade/estado (nunca `address` — a família não tem
+  esse campo exposto aqui, ver "Busca de famílias pelo cuidador" acima), e
+  o botão **`InteresseButton`**
+  (`app/dashboard/cuidador/_components/interesse-button.tsx`) no lugar do
+  `ContratarButton` do lado família — mesmo `POST /api/hires`, mas com
+  `{ familyId }` no corpo (não `{ caregiverId }`) e o texto "Tenho
+  interesse" em vez de "Contratar", já que aqui é o cuidador se oferecendo,
+  não sendo contratado. Trata 409 com a mesma mensagem clara de solicitação
+  já em andamento, adaptada pro contexto ("...com essa família").
+- **`/dashboard/cuidador/match-perfeito`**
+  (`app/dashboard/cuidador/match-perfeito/page.tsx`) espelha
+  `/dashboard/familia/match-recomendado`, usando
+  `findMatchedFamiliesForCaregiver`. Diferença estrutural importante: como
+  `caregiverCapacity` é 3, a tela lista **0 a 3 cards** de família (um
+  `.map`), não um card único condicional como do lado família (capacidade
+  1). Cada card usa o mesmo badge de texto **"Match estável"** (não
+  "Recomendado" — nome adaptado, mesmo princípio) e o mesmo
+  `ConnectionLine` com `STABLE_MATCH_VISUAL_SCORE = 0.9` fixo — **sem**
+  `MatchScoreRing`, mesma razão já documentada: Gale-Shapley não produz um
+  score 0-1 comparável. Também tem `InteresseButton` em cada card, para o
+  cuidador poder agir direto a partir do match sugerido (mesmo padrão do
+  `ContratarButton` em `/match-recomendado`).
+- **Links no dashboard** (`app/dashboard/cuidador/page.tsx`): "Buscar
+  famílias" (`heroAccentButtonClass`, mesmo destaque que "Buscar
+  cuidadores" tem no dashboard da família) e "Match perfeito"
+  (`heroOutlineButtonClass`) lado a lado, acima dos cards de resumo
+  existentes — mesmo par filled+outline já usado no hero da home
+  (`heroButtonClass`/`heroOutlineButtonClass` — aqui com a variante accent
+  no lugar de primary, já que "Buscar famílias" é a ação mais importante
+  da tela, mesmo papel que `heroAccentButtonClass` já tem documentado em
+  `lib/ui.ts`), não um filled+filled: `heroAccentButtonClass` existe
+  especificamente para a *uma* ação que deve se destacar de tudo mais na
+  tela, então dar a mesma cor de destaque às duas competiria com esse
+  propósito.
+
 ## Changelog de decisões
 
 - **Resolvido**: `GET /api/search/caregivers` retornava lista vazia sem
@@ -420,16 +485,19 @@ schema (`prisma/schema.prisma`), com as regras centralizadas em
 `lib/hire-transitions.ts` (única fonte de verdade, usada tanto pela API quanto 
 pelas páginas do dashboard, pra evitar que as duas divirjam).
 
-**Marketplace bidirecional (Fase 1 — só backend)**: originalmente só a 
-família podia iniciar um `Hire` (o cuidador só respondia). Agora os dois 
-lados podem iniciar contato — a família "contrata", o cuidador demonstra 
-"tenho interesse". `Hire.initiatedBy` (`HireInitiator`: `FAMILY` | 
-`CAREGIVER`, novo enum) registra quem deu o primeiro passo; linhas criadas 
-antes desse campo existir têm `@default(FAMILY)` na migration (única 
-leitura possível, já que só famílias podiam iniciar até então). **Ainda não 
-há tela nova para o cuidador iniciar contato** — só a API já aceita, o 
-fluxo completo (busca de famílias + botão "Tenho interesse" no dashboard do 
-cuidador) fica pra uma fase seguinte.
+**Marketplace bidirecional**: originalmente só a família podia iniciar um 
+`Hire` (o cuidador só respondia). Agora os dois lados podem iniciar contato 
+— a família "contrata", o cuidador demonstra "tenho interesse". 
+`Hire.initiatedBy` (`HireInitiator`: `FAMILY` | `CAREGIVER`, novo enum) 
+registra quem deu o primeiro passo; linhas criadas antes desse campo 
+existir têm `@default(FAMILY)` na migration (única leitura possível, já 
+que só famílias podiam iniciar até então). Implementado em duas fases: 
+**Fase 1** só o backend (schema, `lib/hire-transitions.ts`, 
+`POST /api/hires` aceitando os dois papéis, `GET /api/search/families`, 
+`GET /api/matching/stable-match/caregiver`); **Fase 2** as telas do lado 
+cuidador que usam essa API (ver "Telas do cuidador — busca e match 
+perfeito" abaixo) e os ajustes nas duas telas de Hire já existentes para 
+não confundir quem iniciou o quê (ver final desta seção).
 
 **Quem pode agir em cada transição depende de quem iniciou**: o lado que 
 propôs o `Hire` é quem pode desistir dele enquanto ainda está `PENDING`; o 
@@ -479,6 +547,42 @@ sentido uma família avaliar um cuidador (ou vice-versa) depois de um `Hire`
 `COMPLETED` entre os dois — o schema já modela isso (`Review.hireId` único, 
 referenciando um `Hire` específico).
 
+**Tempo relativo (Fase 2)**: `lib/relative-time.ts` (`formatRelativeTime`)
+substitui a data absoluta ("Solicitado em DD/MM/AAAA") por texto em
+português — "agora mesmo", "há 5 minutos", "há 2 horas", "há 3 dias", "há 2
+semanas", "há 3 meses", "há 1 ano" — nos cards de
+`/dashboard/familia/contratacoes` e `/dashboard/cuidador/solicitacoes`. A
+data absoluta não desapareceu: fica no atributo `title` do `<span>` (tooltip
+no hover), então a informação exata continua acessível sem competir
+visualmente com o texto relativo. Estilizado com o novo `metaTextClass`
+(`lib/ui.ts`) — texto pequeno e `muted`, deliberadamente **sem**
+`font-mono`: diferente de um dado verificado (preço, distância, nota), uma
+frase relativa ("há 5 minutos") é prosa, não um valor numérico redisplay,
+então a convenção de `font-mono` do design system não se aplica aqui.
+
+**Badge de direção (Fase 2)**: como agora um `Hire` pode ter sido iniciado
+por qualquer um dos dois lados, uma mesma lista (`/contratacoes` ou
+`/solicitacoes`) pode misturar solicitações que a pessoa logada enviou com
+solicitações que ela recebeu — sem indicação visual, isso confundiria quem
+está vendo a tela. `getHireDirectionLabel(initiatedBy, viewerRole)`
+(`lib/hire-labels.ts`) resolve isso do ponto de vista de quem está olhando,
+não do dado bruto: retorna **"Você enviou"** se `initiatedBy` bate com o
+role de quem está logado, **"Recebido"** caso contrário. Renderizado como
+um pill pequeno e discreto (`border-muted/30`, `text-xs`) ao lado do tempo
+relativo em cada card, nas duas telas. Título de
+`/dashboard/cuidador/solicitacoes` mudou de "Solicitações recebidas" para
+**"Minhas solicitações"** pela mesma razão — o nome antigo pressupunha que
+a lista só continha pedidos recebidos, o que não é mais verdade.
+`/dashboard/familia/contratacoes` manteve "Minhas contratações": o nome já
+era neutro o suficiente (não dizia "enviadas" nem "recebidas"), então não
+precisou mudar.
+
+Os botões de ação de cada card (incluindo "Cancelar", disponível quando a
+pessoa logada é quem propôs um `Hire` ainda `PENDING`) continuam vindo
+inteiramente de `getAvailableActions` (`lib/hire-transitions.ts`, já
+parametrizada por `initiatedBy` desde a Fase 1) — nenhuma das duas páginas
+reimplementa essa lógica, só passam `hire.initiatedBy` adiante.
+
 ## Sistema de Review
 
 Implementado sobre o model `Review` já existente no schema 
@@ -525,7 +629,9 @@ Prisma direto ali, junto com a sessão.
     (`border-primary/20 bg-primary-light`) e texto/link já usados em
     `/dashboard/familia/buscar` para o caso de `neededCareTypes` vazio, em
     vez de inventar um estilo novo para o mesmo aviso.
-- **Dashboard do cuidador**:
+- **Dashboard do cuidador**: ganhou os links "Buscar famílias"/"Match
+  perfeito" acima dos cards na Fase 2 do marketplace bidirecional — ver
+  "Telas do cuidador — busca e match perfeito" para os detalhes.
   - Card "Solicitações": `prisma.hire.count` de `PENDING` recebidos. Com
     pelo menos 1 pendente, o card troca para `border-accent`/`bg-accent-light`
     (chamando atenção de que precisa de ação); com zero, é um
