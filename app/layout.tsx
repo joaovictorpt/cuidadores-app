@@ -27,7 +27,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: `${siteConfig.name} — ${siteConfig.tagline}`,
+  title: siteConfig.name,
   description:
     "Marketplace que conecta famílias a cuidadores de confiança para idosos, crianças e pessoas com necessidades especiais.",
 };

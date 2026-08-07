@@ -35,8 +35,8 @@ export async function SiteHeader() {
           href="/"
           className="inline-flex items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
-          <TrevoLogo className="h-6 w-6" />
-          <span className="font-display text-base font-semibold text-ink">
+          <TrevoLogo className="h-9 w-9" />
+          <span className="font-display text-xl font-semibold text-ink">
             {siteConfig.name}
           </span>
         </Link>

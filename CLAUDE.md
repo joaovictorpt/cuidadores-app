@@ -467,30 +467,44 @@ não uma porcentagem, pela mesma razão. Centralizado em `lib/ui.ts` (classes
 reutilizáveis) e `app/globals.css` (tokens do tema, via `@theme inline` — ver
 nota sobre Tailwind v4 abaixo).
 
-**Direção visual — "Editorial de Confiança"**: a paleta verde-petróleo/âmbar
-original (registrada logo abaixo só como histórico) foi substituída por esta
-segunda direção, importada de uma exploração feita no Claude Design com esse
-nome — serif de jornal, tons de bordô sobre papel quente. Aplicada em duas
-fases: **Fase A** trocou só a base (tokens de cor, tipografia de display,
-hierarquia dos CTAs do hero); **Fase B** (ver "Componentes da Fase B" abaixo)
-trocou os componentes específicos que dependiam da direção antiga —
-`MatchScoreRing`, o placeholder de foto com listras, a barra-resumo e as
-pílulas de ordenação de `/buscar`, e os links de navegação do header.
+**Direção visual — histórico**: o site já passou por três paletas. A
+original era verde-petróleo/âmbar. Depois veio "Editorial de Confiança"
+(preto quase-puro + bordô sobre papel quente, importada de uma exploração
+no Claude Design com esse nome), aplicada em duas fases — **Fase A** só a
+base (tokens de cor, tipografia de display, hierarquia dos CTAs do hero) e
+**Fase B** os componentes específicos que dependiam dela (`MatchScoreRing`,
+o placeholder de foto com listras, a barra-resumo e as pílulas de
+ordenação de `/buscar`, os links de navegação do header — ver "Componentes
+da Fase B" abaixo). A paleta **atual, monocromática oliva sobre creme**,
+substitui o preto+bordô da "Editorial de Confiança": `accent` deixou de ser
+uma segunda cor de destaque e passou a ser exatamente a mesma cor de
+`primary` (ver tabela abaixo) — o site inteiro passou a usar um hue só. Só
+os *valores* de cor mudaram nessa última troca; tipografia (Source Serif 4/
+Work Sans/JetBrains Mono) e a hierarquia dos CTAs (preenchido vs.
+contornado) do hero, ambas decididas na Fase A, continuam as mesmas.
 
-**Paleta** (`app/globals.css`): tons claros/escuros de `primary` e `accent` 
-são derivados em HSL a partir do mesmo hue/saturation da cor base, variando 
-só a lightness — não são valores escolhidos à mão, pra formar uma família 
-consistente.
+**Paleta** (`app/globals.css`): tons claros/escuros de `primary` são
+derivados em HSL a partir do mesmo hue/saturation da cor base, variando só
+a lightness — não são valores escolhidos à mão, pra formar uma família
+consistente. `accent`/`accent-dark`/`accent-light` não são mais valores
+próprios: são `var(--color-primary)`/`var(--color-primary-dark)`/
+`var(--color-primary-light)`, uma referência direta, não um literal
+duplicado — de propósito, já que essa paleta é monocromática por decisão
+(não há uma segunda cor de destaque nesta direção). O token continua
+existindo separado porque vários componentes já foram escritos contra
+`accent` especificamente (`MatchScoreRing`, a pílula ativa de ordenação,
+"Entrar", `accentButtonClass`) — eles continuam funcionando sem alteração
+de código, só passam a renderizar na mesma cor de `primary`.
 
 | Token Tailwind | Hex/HSL | Uso |
 |---|---|---|
-| `primary` | `#1C1712` / `hsl(30 22% 9%)` | botões primários preenchidos — nesta direção é a mesma cor de `ink`, não uma cor de marca separada: o botão de destaque principal é escuro, não colorido |
-| `primary-dark` | `hsl(30 22% 5%)` | hover/active de botões primários |
-| `primary-light` | `hsl(30 22% 94%)` | tints sutis (badges, avatar placeholder) |
-| `accent` | `#6E1E42` / `hsl(333 57% 27%)` | bordô — reservado a um conjunto pequeno e deliberado de destaques: "Entrar", pílula ativa, anel de compatibilidade, CTAs de destaque ("Contratar", "Aceitar") |
-| `accent-dark` | `hsl(333 57% 17%)` | hover/active de botões accent |
-| `accent-light` | `hsl(333 57% 92%)` | tints sutis |
-| `background` | `#F7F3EC` | fundo geral (papel quente) |
+| `primary` | `#5F6E3D` / `hsl(78 29% 34%)` | botão preenchido principal, "Entrar", fundo da seção final "Pronto para começar" |
+| `primary-dark` | `hsl(78 29% 26%)` | hover/active de botões primários |
+| `primary-light` | `hsl(78 29% 92%)` | tints sutis (badges, avatar placeholder) |
+| `accent` | `var(--color-primary)` (mesmo `#5F6E3D`) | idêntico a `primary` — direção monocromática, sem segunda cor de destaque |
+| `accent-dark` | `var(--color-primary-dark)` | idem |
+| `accent-light` | `var(--color-primary-light)` | idem |
+| `background` | `#F8F3E9` | fundo geral (creme) |
 | `ink` | `#1C1712` | texto principal (quase-preto, tom quente) |
 | `muted` | `#6B645C` | texto secundário, labels, bordas |
 
@@ -501,15 +515,22 @@ significados diferentes e incompatíveis (marca vs. texto). Renomeados para
 `ink`/`muted` pra eliminar a ambiguidade; os valores hex são exatamente os
 pedidos em cada direção visual.
 
-**Contraste — ajuste necessário na troca de paleta**: `accentButtonClass` e
-`heroAccentButtonClass` (`lib/ui.ts`) usavam `text-ink` sobre `bg-accent` —
-correto quando `accent` era o âmbar claro (`hsl(38 75% 55%)`) da direção
-anterior, mas quebrado com o bordô escuro atual (`hsl(333 57% 27%)`): texto
-quase-preto sobre bordô escuro cai pra ~1.6:1 de contraste. Trocado para
-`text-white` (~11:1) nos dois. O favicon (`app/icon.svg`) também precisou de
-ajuste manual — é uma cópia hardcoded do logo (`fill` fixo, não herda
-tokens CSS, ver "Identidade do site" abaixo) e ficou com o `primary` antigo
-até ser atualizado pra `#1C1712` nesta troca.
+**Contraste**: `ink`/`muted` não mudaram nesta troca — o novo `background`
+(`#F8F3E9`) é quase idêntico em luminosidade ao anterior (`#F7F3EC`), então
+o contraste do texto de corpo continuou adequado sem precisar de ajuste.
+`accentButtonClass`/`heroAccentButtonClass` (`lib/ui.ts`) usam `text-white`
+sobre `bg-accent` desde a fase "Editorial de Confiança" (quando isso foi
+necessário pra corrigir um contraste quebrado contra o bordô escuro daquela
+direção — ver histórico no commit) — com `accent` agora igual a `primary`
+(`hsl(78 29% 34%)`), o contraste ficou em ~5.5:1, então `text-white`
+continua correto sem precisar de outro ajuste.
+
+**A logo mantém cores próprias, independentes do tema**: `app/components/trevo-logo.tsx`
+e `app/icon.svg` têm `fill` fixo por `<path>` (mão em `#D9A576`, trevo em
+`#2F7A4D` — ver "Identidade do site" abaixo) desde a tarefa que os tirou de
+`currentColor`. Nenhuma troca de paleta do restante do site (incluindo
+esta) afeta essas duas cores — elas não usam nenhum token de
+`app/globals.css`.
 
 **Tipografia**, via `next/font/google` em `app/layout.tsx` (self-hosted — 
 baixadas em build time, servidas pelo próprio domínio, sem request pro CDN do 
@@ -696,7 +717,10 @@ vivem centralizados em `lib/site-config.ts` (`siteConfig.name` /
 em `app/layout.tsx` (título/descrição da página) e `app/page.tsx` (hero e 
 rodapé); qualquer lugar novo que precisar do nome/tagline do site (emails 
 transacionais, outras páginas de marketing) deve importar dali, não repetir 
-a string.
+a string. O `<title>` da aba (`metadata.title` em `app/layout.tsx`) é só
+`siteConfig.name` ("Trevo") — era `"${siteConfig.name} — ${siteConfig.tagline}"`
+("Trevo — Cuidado que conecta"); a tagline continua no `<meta description>`
+e visível no hero da home, só saiu do texto da aba do navegador.
 
 **Logo**: `app/components/trevo-logo.tsx` — componente React do SVG (ícone de
 mão segurando um trevo de três folhas). **Cores fixas por parte, não mais
@@ -709,8 +733,12 @@ logo era monocromática, herdando cor via Tailwind (`className="text-primary"`
 no `<svg>`); os três lugares que passavam essa classe (`app/page.tsx` no
 hero e no rodapé, `app/components/site-header.tsx`) tiveram o `text-primary`
 removido do `className` por não ter mais efeito nenhum sobre o desenho.
-Usado no hero da home (`h-16 w-16`/`h-20 w-20` responsivo), no rodapé
-(`h-5 w-5`) e no header (`h-6 w-6`). `app/icon.svg` é uma cópia do mesmo
+Usado no hero da home (`h-24 w-24`/`h-28 w-28` responsivo — aumentado a
+partir de `h-16`/`h-20`, que ficava pequeno demais em relação ao `h1`
+"Trevo" logo abaixo), no rodapé (`h-5 w-5`, sem alteração) e no header
+(`h-9 w-9`, aumentado de `h-6 w-6`, acompanhado do texto "Trevo" indo de
+`text-base` para `text-xl` — os dois cresceram juntos pra manter o
+alinhamento vertical entre ícone e texto). `app/icon.svg` é uma cópia do mesmo
 desenho com o mesmo esquema de duas cores (favicons não herdam contexto de
 CSS, então não há como usar `currentColor`/Tailwind ali) — detectado
 automaticamente pelo App Router como favicon, sem config extra em
@@ -733,7 +761,9 @@ cima para baixo:
   hover do botão contornado usa `bg-ink/5` (não `bg-primary-light`) porque
   ele aparece tanto sobre o `background` da página quanto dentro da seção
   final, que já é `bg-primary-light` — um tint de hover igual ao fundo
-  ficaria invisível ali.
+  ficaria invisível ali. A frase curta de proposta usa vírgula em vez de
+  travessão antes de "e para cuidadores encontrarem famílias" — mudança
+  puramente de pontuação, mesmo sentido.
 - **Como funciona**: 3 passos com ícone (`lucide-react`), conectados 
   visualmente pelo mesmo `ConnectionLine` já usado em `/buscar` e 
   `/match-recomendado` (reforça a metáfora de "conexão" da tagline). O 

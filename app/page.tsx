@@ -61,7 +61,7 @@ export default function HomePage() {
     <main className="flex-1">
       {/* HERO */}
       <section className="px-4 pb-20 pt-8 text-center sm:pb-28 sm:pt-10">
-        <TrevoLogo className="mx-auto h-16 w-16 sm:h-20 sm:w-20" />
+        <TrevoLogo className="mx-auto h-24 w-24 sm:h-28 sm:w-28" />
         <h1 className="mt-4 font-display text-5xl font-bold text-ink sm:text-6xl">
           {siteConfig.name}
         </h1>
@@ -70,7 +70,7 @@ export default function HomePage() {
         </p>
         <p className="mx-auto mt-6 max-w-xl text-base text-muted sm:text-lg">
           Um marketplace para encontrar cuidadores de confiança para idosos,
-          crianças e pessoas com necessidades especiais — e para cuidadores
+          crianças e pessoas com necessidades especiais, e para cuidadores
           encontrarem famílias que precisam deles.
         </p>
         <HeroCtas />
