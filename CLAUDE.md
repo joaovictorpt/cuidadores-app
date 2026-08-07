@@ -699,14 +699,23 @@ transacionais, outras páginas de marketing) deve importar dali, não repetir
 a string.
 
 **Logo**: `app/components/trevo-logo.tsx` — componente React do SVG (ícone de
-trevo), `fill="currentColor"` no elemento raiz para herdar cor via Tailwind
-(`className="text-primary"` etc.) em vez de cor fixa. Usado no hero da home
-(`h-16 w-16`/`h-20 w-20` responsivo) e no rodapé (`h-5 w-5`), sempre em
-`primary`. `app/icon.svg` é uma cópia com `fill="#1F5C56"` fixo (favicons não
-herdam contexto de CSS) — detectado automaticamente pelo App Router como
-favicon, sem config extra em `layout.tsx`. O `favicon.ico` original do
-`create-next-app` foi mantido como fallback para navegadores sem suporte a
-favicon SVG.
+mão segurando um trevo de três folhas). **Cores fixas por parte, não mais
+`currentColor`**: o primeiro `<path>` do arquivo (a mão) tem
+`fill="#D9A576"` (tom de pele neutro) e os outros 5 `<path>` (as três
+folhas do trevo) têm `fill="#2F7A4D"` (verde), cada um declarado
+individualmente no próprio elemento — o `<svg>` raiz não tem mais
+`fill="currentColor"`, já que não há mais nada para herdar. Antes disso a
+logo era monocromática, herdando cor via Tailwind (`className="text-primary"`
+no `<svg>`); os três lugares que passavam essa classe (`app/page.tsx` no
+hero e no rodapé, `app/components/site-header.tsx`) tiveram o `text-primary`
+removido do `className` por não ter mais efeito nenhum sobre o desenho.
+Usado no hero da home (`h-16 w-16`/`h-20 w-20` responsivo), no rodapé
+(`h-5 w-5`) e no header (`h-6 w-6`). `app/icon.svg` é uma cópia do mesmo
+desenho com o mesmo esquema de duas cores (favicons não herdam contexto de
+CSS, então não há como usar `currentColor`/Tailwind ali) — detectado
+automaticamente pelo App Router como favicon, sem config extra em
+`layout.tsx`. O `favicon.ico` original do `create-next-app` foi mantido
+como fallback para navegadores sem suporte a favicon SVG.
 
 **Home page (`app/page.tsx`)**: pública e **sempre visível**, mesmo pra quem
 já está logado — não redireciona mais ninguém (ver "Navegação" acima para o

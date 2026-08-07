@@ -61,7 +61,7 @@ export default function HomePage() {
     <main className="flex-1">
       {/* HERO */}
       <section className="px-4 pb-20 pt-8 text-center sm:pb-28 sm:pt-10">
-        <TrevoLogo className="mx-auto h-16 w-16 text-primary sm:h-20 sm:w-20" />
+        <TrevoLogo className="mx-auto h-16 w-16 sm:h-20 sm:w-20" />
         <h1 className="mt-4 font-display text-5xl font-bold text-ink sm:text-6xl">
           {siteConfig.name}
         </h1>
@@ -142,7 +142,7 @@ export default function HomePage() {
 
       {/* RODAPÉ */}
       <footer className="flex items-center justify-center gap-2 border-t border-muted/20 px-4 py-8 text-center text-sm text-muted">
-        <TrevoLogo className="h-5 w-5 text-primary" />
+        <TrevoLogo className="h-5 w-5" />
         <span>
           <span className="font-display font-semibold text-ink">
             {siteConfig.name}
