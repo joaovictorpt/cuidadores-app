@@ -637,6 +637,34 @@ oficial a React 19 (`peerDependencies` inclui `^19.0.0`). O valor propagado
 pelo `onChange` do componente é sempre o dígitos-puros (`values.value`), não
 a string formatada.
 
+**Validação de telefone completo**: a máscara acima só formata visualmente —
+sozinha, ela não impede submissão de um número incompleto (ex.: "(62)
+99333-445", 10 dígitos em vez dos 11 de um celular brasileiro válido: 2 do
+DDD + 9 do número). `lib/phone.ts` (`PHONE_REGEX`, `isCompletePhone`,
+`PHONE_INVALID_MESSAGE = "Telefone inválido — informe DDD + 9 dígitos"`) é a
+fonte única dessa regra — mesmo padrão de `lib/age.ts` para a idade mínima:
+um só lugar validando, reaproveitado no client e no servidor, pra nunca
+divergir.
+- **Servidor (autoritativo)**: `phone: z.string().regex(PHONE_REGEX, ...)`
+  em `app/api/register/route.ts` (ambos os branches, `FAMILY` e
+  `CAREGIVER`, já que `phone` está em `baseFields`, compartilhado pelos
+  dois) e `.regex(PHONE_REGEX, ...).optional()` em `app/api/family-profile/route.ts`
+  e `app/api/caregiver-profile/route.ts` — nessas duas o campo continua
+  opcional (edição de perfil não obriga alterar o telefone), mas *se*
+  enviado, precisa bater os 11 dígitos; não há mais como um PATCH salvar um
+  telefone incompleto.
+- **Cliente (feedback instantâneo)**: os 4 formulários que usam
+  `PhoneInput` (`app/cadastro/familia/page.tsx`,
+  `app/cadastro/cuidador/page.tsx`, e os dois `profile-form.tsx` de edição
+  de perfil) chamam `isCompletePhone` antes do submit, mesmo padrão já
+  usado para a data de nascimento. Nos dois formulários de cadastro, onde
+  telefone é obrigatório, a checagem dispara sempre que o campo não tem 11
+  dígitos. Nos dois formulários de edição de perfil, onde telefone é
+  opcional, a checagem só dispara se o campo não estiver vazio
+  (`form.phone && !isCompletePhone(form.phone)`) — campo vazio continua
+  significando "não alterar o telefone salvo" (`form.phone || undefined`
+  no corpo da requisição), não "telefone inválido".
+
 **Máscara de data de nascimento**: `app/components/birth-date-input.tsx`
 segue exatamente o mesmo padrão do `phone-input.tsx` acima — `PatternFormat`
 com formato `##/##/####` e placeholder `dd/mm/aaaa`, em vez do

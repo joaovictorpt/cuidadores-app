@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 
 import { LocationFields } from "@/app/components/location-fields";
 import { PhoneInput } from "@/app/components/phone-input";
+import { isCompletePhone, PHONE_INVALID_MESSAGE } from "@/lib/phone";
 import {
   blurOnWheel,
   cardClass,
@@ -59,6 +60,17 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
     event.preventDefault();
     setStatus("idle");
     setMessage(null);
+
+    // Same completeness check as the registration forms (lib/phone.ts) --
+    // only when a phone was actually typed here, since this field is
+    // optional on edit (an empty value means "don't change it", see the
+    // `form.phone || undefined` below).
+    if (form.phone && !isCompletePhone(form.phone)) {
+      setStatus("error");
+      setMessage(PHONE_INVALID_MESSAGE);
+      return;
+    }
+
     setLoading(true);
 
     try {

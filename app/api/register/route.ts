@@ -12,6 +12,7 @@ import {
 } from "@/lib/age";
 import { BR_STATE_UFS } from "@/lib/br-states";
 import { buildGeocodeQuery, geocodeAddress } from "@/lib/geocoding";
+import { PHONE_INVALID_MESSAGE, PHONE_REGEX } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 
 const BCRYPT_SALT_ROUNDS = 12;
@@ -37,7 +38,7 @@ const baseFields = {
     .refine(isAdult, {
       message: `Você precisa ter pelo menos ${MIN_REGISTRATION_AGE} anos para se cadastrar`,
     }),
-  phone: z.string().min(1, "Telefone é obrigatório"),
+  phone: z.string().regex(PHONE_REGEX, PHONE_INVALID_MESSAGE),
   city: z.string().min(1, "Cidade é obrigatória"),
   state: z.enum(BR_STATE_UFS, { message: "Selecione um estado válido" }),
 };

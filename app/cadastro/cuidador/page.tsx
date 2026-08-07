@@ -19,6 +19,7 @@ import {
   parseBirthDateInput,
 } from "@/lib/age";
 import { firstApiErrorMessage } from "@/lib/api-error";
+import { isCompletePhone, PHONE_INVALID_MESSAGE } from "@/lib/phone";
 import {
   blurOnWheel,
   cardClass,
@@ -72,9 +73,15 @@ export default function CadastroCuidadorPage() {
 
     // Client-side checks for instant feedback -- the server (app/api
     // /register/route.ts) re-validates all of this authoritatively via the
-    // same lib/age.ts helpers, so none of it can be bypassed by skipping the
-    // UI. parseBirthDateInput rejects both incomplete input (fewer than 8
-    // digits typed) and calendar-impossible dates (e.g. 31/02) up front.
+    // same lib/age.ts/lib/phone.ts helpers, so none of it can be bypassed by
+    // skipping the UI. parseBirthDateInput rejects both incomplete input
+    // (fewer than 8 digits typed) and calendar-impossible dates (e.g.
+    // 31/02) up front.
+    if (!isCompletePhone(form.phone)) {
+      setError(PHONE_INVALID_MESSAGE);
+      return;
+    }
+
     const birthDateValue = parseBirthDateInput(form.birthDate);
     if (!birthDateValue) {
       setError("Data de nascimento inválida ou incompleta.");

@@ -5,10 +5,11 @@ import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
 import { buildGeocodeQuery, geocodeAddress } from "@/lib/geocoding";
+import { PHONE_INVALID_MESSAGE, PHONE_REGEX } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 
 const updateSchema = z.object({
-  phone: z.string().optional(),
+  phone: z.string().regex(PHONE_REGEX, PHONE_INVALID_MESSAGE).optional(),
   city: z.string().optional(),
   state: z.string().optional(),
   address: z.string().optional(),
