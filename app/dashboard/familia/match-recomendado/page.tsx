@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 
 import { BackLink } from "@/app/dashboard/_components/back-link";
+import { AvatarPlaceholder } from "@/app/dashboard/familia/_components/avatar-placeholder";
 import { ConnectionLine } from "@/app/dashboard/familia/_components/connection-line";
 import { ContratarButton } from "@/app/dashboard/familia/_components/contratar-button";
 import { authOptions } from "@/lib/auth";
@@ -70,12 +71,7 @@ export default async function MatchRecomendadoPage() {
           <div className="rounded-card border border-muted/20 bg-white p-6 shadow-sm sm:p-8">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-4">
-                <div
-                  aria-hidden="true"
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-light font-display text-lg font-semibold text-primary"
-                >
-                  {(caregiverProfile.user.name ?? "C").charAt(0).toUpperCase()}
-                </div>
+                <AvatarPlaceholder name={caregiverProfile.user.name} />
                 <div>
                   <h2 className="font-display text-xl font-semibold text-ink">
                     {caregiverProfile.user.name ?? "Cuidador"}

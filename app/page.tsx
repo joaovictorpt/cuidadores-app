@@ -60,7 +60,7 @@ export default function HomePage() {
   return (
     <main className="flex-1">
       {/* HERO */}
-      <section className="px-4 py-20 text-center sm:py-28">
+      <section className="px-4 pb-20 pt-8 text-center sm:pb-28 sm:pt-10">
         <TrevoLogo className="mx-auto h-16 w-16 text-primary sm:h-20 sm:w-20" />
         <h1 className="mt-4 font-display text-5xl font-bold text-ink sm:text-6xl">
           {siteConfig.name}
@@ -77,7 +77,7 @@ export default function HomePage() {
       </section>
 
       {/* COMO FUNCIONA */}
-      <section className="bg-white px-4 py-16 sm:py-20">
+      <section id="como-funciona" className="bg-white px-4 py-16 sm:py-20">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-center font-display text-3xl font-semibold text-ink">
             Como funciona

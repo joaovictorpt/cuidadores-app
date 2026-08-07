@@ -471,9 +471,11 @@ nota sobre Tailwind v4 abaixo).
 original (registrada logo abaixo só como histórico) foi substituída por esta
 segunda direção, importada de uma exploração feita no Claude Design com esse
 nome — serif de jornal, tons de bordô sobre papel quente. Aplicada em duas
-fases: **Fase A** (esta) trocou só a base — tokens de cor, tipografia de
-display, hierarquia dos CTAs do hero — sem tocar em componentes novos ou
-ajustes mais específicos de tela, que ficam para uma tarefa seguinte.
+fases: **Fase A** trocou só a base (tokens de cor, tipografia de display,
+hierarquia dos CTAs do hero); **Fase B** (ver "Componentes da Fase B" abaixo)
+trocou os componentes específicos que dependiam da direção antiga —
+`MatchScoreRing`, o placeholder de foto com listras, a barra-resumo e as
+pílulas de ordenação de `/buscar`, e os links de navegação do header.
 
 **Paleta** (`app/globals.css`): tons claros/escuros de `primary` e `accent` 
 são derivados em HSL a partir do mesmo hue/saturation da cor base, variando 
@@ -532,14 +534,77 @@ em vez do outline default do navegador — nunca `outline-none` sem substituto.
 ao lado, respeitando `prefers-reduced-motion`.
 
 **Elemento de assinatura — linha de conexão**: `app/dashboard/familia/_components/connection-line.tsx`, 
-um SVG simples (curva + dois pontos) representando família↔cuidador, usado 
-nos cards de `/dashboard/familia/buscar` e `/dashboard/familia/match-recomendado` 
-(e no "Como funciona" da home — ver seção "Identidade do site"). A curvatura 
-varia com o `matchScore`: score alto → linha mais reta ("tensa"), score baixo 
-→ linha mais solta. Em `match-recomendado`, como não existe um score real, 
-usa-se uma constante 0.9, documentada no código. É só decorativo 
-(`aria-hidden`), posicionado sem competir com nome/match score/preço, que são 
-o foco real do card.
+um SVG simples (curva + dois pontos) representando família↔cuidador. A
+curvatura varia com o `matchScore`: score alto → linha mais reta ("tensa"),
+score baixo → linha mais solta. É só decorativo (`aria-hidden`), posicionado
+sem competir com nome/match score/preço, que são o foco real do card. Desde
+a Fase B (abaixo), só continua em uso em `/dashboard/familia/match-recomendado`
+(com a constante `STABLE_MATCH_VISUAL_SCORE = 0.9`, documentada no código) e
+no "Como funciona" da home — em `/buscar`, onde existe um score real, foi
+substituída pelo `MatchScoreRing`.
+
+**Componentes da Fase B** (`app/dashboard/familia/_components/` e
+`app/dashboard/familia/buscar/_components/`), aplicados só onde a regra de
+"nunca fabricar um número que pareça real sem ser" permite:
+
+- **`match-score-ring.tsx`** (`MatchScoreRing`): anel de progresso SVG
+  (`stroke` em `accent`, trilho em `accent-light`) com a porcentagem
+  (`matchScore * 100`, arredondada) no centro. Usado **só** em `/buscar`,
+  que tem um `matchScore` 0-1 real vindo de `computeMatchScore`
+  (`rankCaregiversForFamily`). **Deliberadamente não usado** em
+  `/match-recomendado`: o Gale-Shapley não produz um score 0-1 comparável
+  (é um resultado categórico — "este é seu cuidador designado"), então essa
+  tela continua com `ConnectionLine` + o badge de texto "Recomendado" em vez
+  de inventar um número. Substitui o antigo badge percentual
+  (`{Math.round(matchScore * 100)}%` num pill de texto) que existia em
+  `/buscar` antes da Fase B — mostrar os dois ao mesmo tempo seria
+  redundante.
+- **`avatar-placeholder.tsx`** (`AvatarPlaceholder`): substitui o círculo de
+  iniciais com fundo sólido (`bg-primary-light`) por um padrão de listras
+  diagonais sutil (`repeating-linear-gradient` inline, alternando
+  `accent-light` e transparente sobre `bg-white`), com a inicial do nome
+  ainda sobreposta no centro — mantém a distinção visual entre cards em uma
+  lista, só que com a textura da nova direção em vez de uma cor chapada.
+  Usado em `/buscar` e `/match-recomendado`; não tocado em nenhum outro
+  lugar (ex.: o card "Match recomendado" do dashboard da família não tem
+  avatar, só texto).
+- **Barra-resumo de `/buscar`** (`app/dashboard/familia/buscar/page.tsx`):
+  chip somente-leitura mostrando os critérios já salvos no perfil da família
+  (`neededCareTypes` + `address`/`city`) com um link "Editar perfil" ao
+  lado — deliberadamente **não** é um campo de busca por texto livre, porque
+  o sistema não tem esse conceito: a busca sempre roda sobre o perfil salvo
+  (`neededCareTypes` + localização geocodificada), nunca sobre uma query
+  digitada. Só aparece quando a busca de fato rodou (perfil com localização
+  e tipos de cuidado completos).
+- **Pílulas de ordenação de `/buscar`** (`app/dashboard/familia/buscar/_components/caregiver-results.tsx`,
+  `CaregiverResults`, Client Component): "Mais próximo" (por `distanceKm`
+  crescente), "Melhor avaliação" (por `averageRating` decrescente, com
+  cuidadores sem review nenhum ordenados por último em vez de primeiro —
+  tratar "sem dado" como "pior nota" seria enganoso) e "Mais compatível"
+  (por `matchScore` decrescente — o padrão inicial, já é como a API retorna
+  a lista). Reordena a lista já carregada no cliente (`distanceKm`/
+  `averageRating`/`matchScore` já vêm todos na resposta de
+  `rankCaregiversForFamily`) — nenhuma chamada nova ao servidor. Essa
+  necessidade de interatividade é o motivo de `/buscar` ter ganhado esse
+  Client Component: o `page.tsx` continua um Server Component (sessão +
+  Prisma), só a lista de resultados (que agora precisa de estado de
+  ordenação) foi extraída. Pílula ativa: `bg-accent-light`/`text-accent`;
+  inativas: borda neutra com `bg-white`.
+
+**Navegação do header** (`app/components/site-header.tsx`): ganhou uma
+`<nav>` com três links — "Para famílias" (`/cadastro/familia`), "Para
+cuidadores" (`/cadastro/cuidador`), "Como funciona" (`/#como-funciona`, a
+seção já existente na home, que ganhou esse `id`) — visível só em `md:`
+pra cima (`hidden md:flex`); em mobile esses links ainda não têm um menu
+próprio, fica só a marca + "Entrar"/conta. O link "Entrar" (estado sem
+sessão) trocou de `secondaryButtonClass` para `accentButtonClass` — botão
+preenchido em bordô, não mais um botão neutro contornado.
+
+**Espaçamento do hero da home**: a seção do hero (`app/page.tsx`) usava
+`py-20 sm:py-28` simétrico; o topo ficou `pt-8 sm:pt-10` (o `pb-20 sm:pb-28`
+embaixo não mudou) — o cabeçalho fixo já ocupa espaço próprio no topo da
+página, então o padding vertical idêntico dos dois lados deixava uma faixa
+vazia grande demais entre ele e o logo/tagline do hero.
 
 **Máscara de telefone**: `app/components/phone-input.tsx` envolve o
 `PatternFormat` da biblioteca **react-number-format** para aplicar o formato

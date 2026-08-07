@@ -3,8 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BackLink } from "@/app/dashboard/_components/back-link";
-import { ConnectionLine } from "@/app/dashboard/familia/_components/connection-line";
-import { ContratarButton } from "@/app/dashboard/familia/_components/contratar-button";
+import { CaregiverResults } from "@/app/dashboard/familia/buscar/_components/caregiver-results";
 import { authOptions } from "@/lib/auth";
 import { rankCaregiversForFamily } from "@/lib/matching";
 import { matchingConfig } from "@/lib/matching-config";
@@ -73,6 +72,26 @@ export default async function BuscarCuidadoresPage() {
           </div>
         )}
 
+        {!missingLocation && !missingCareTypes && familyProfile && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-muted/20 bg-white px-4 py-3 text-sm text-ink">
+            <span>
+              {familyProfile.neededCareTypes
+                .map((type) => CARE_TYPE_LABELS[type] ?? type)
+                .join(", ")}
+              {" · "}
+              {[familyProfile.address, familyProfile.city]
+                .filter(Boolean)
+                .join(", ")}
+            </span>
+            <Link
+              href="/dashboard/familia/perfil"
+              className="font-medium text-primary hover:underline"
+            >
+              Editar perfil
+            </Link>
+          </div>
+        )}
+
         {!missingLocation && !missingCareTypes && ranked.length === 0 && (
           <p className="text-sm text-muted">
             Nenhum cuidador encontrado a até {matchingConfig.maxDistanceKm}km
@@ -80,71 +99,7 @@ export default async function BuscarCuidadoresPage() {
           </p>
         )}
 
-        <div className="space-y-5">
-          {ranked.map(({ caregiver, distanceKm, matchScore }) => (
-            <div
-              key={caregiver.id}
-              className="rounded-card border border-muted/20 bg-white p-6 shadow-sm sm:p-8"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div
-                    aria-hidden="true"
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-light font-display text-lg font-semibold text-primary"
-                  >
-                    {(caregiver.name ?? "C").charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h2 className="font-display text-xl font-semibold text-ink">
-                      {caregiver.name ?? "Cuidador"}
-                    </h2>
-                    {caregiver.bio && (
-                      <p className="mt-1 text-sm text-muted">{caregiver.bio}</p>
-                    )}
-                    <p className="mt-2 text-xs text-muted">
-                      {caregiver.careTypes
-                        .map((type) => CARE_TYPE_LABELS[type] ?? type)
-                        .join(", ")}
-                    </p>
-                  </div>
-                </div>
-                <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 font-mono text-sm font-medium text-primary">
-                  {Math.round(matchScore * 100)}%
-                </span>
-              </div>
-
-              <dl className="mt-5 grid grid-cols-3 gap-4">
-                <div>
-                  <dt className="text-xs text-muted">Distância</dt>
-                  <dd className="font-mono text-sm text-ink/80">
-                    {distanceKm.toFixed(1)} km
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted">Avaliação</dt>
-                  <dd className="font-mono text-sm text-ink/80">
-                    {caregiver.averageRating !== null
-                      ? `${caregiver.averageRating.toFixed(1)}/5 (${caregiver.reviewCount})`
-                      : "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted">Valor/hora</dt>
-                  <dd className="font-mono text-sm text-ink/80">
-                    {caregiver.hourlyRate !== null
-                      ? `R$ ${caregiver.hourlyRate.toFixed(2)}`
-                      : "—"}
-                  </dd>
-                </div>
-              </dl>
-
-              <div className="mt-5 flex items-center justify-between">
-                <ConnectionLine matchScore={matchScore} />
-                <ContratarButton caregiverUserId={caregiver.userId} />
-              </div>
-            </div>
-          ))}
-        </div>
+        {ranked.length > 0 && <CaregiverResults results={ranked} />}
       </div>
     </main>
   );
