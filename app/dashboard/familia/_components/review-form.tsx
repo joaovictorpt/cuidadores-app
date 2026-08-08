@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { StarRating } from "@/app/components/star-rating";
 import {
   errorTextClass,
   inputClass,
@@ -10,8 +11,6 @@ import {
   secondaryButtonClass,
   successTextClass,
 } from "@/lib/ui";
-
-const RATING_OPTIONS = [5, 4, 3, 2, 1];
 
 export function ReviewForm({ hireId }: { hireId: string }) {
   const router = useRouter();
@@ -76,21 +75,8 @@ export function ReviewForm({ hireId }: { hireId: string }) {
       className="space-y-3 rounded-lg border border-muted/20 p-3"
     >
       <div>
-        <label htmlFor={`rating-${hireId}`} className={labelClass}>
-          Nota
-        </label>
-        <select
-          id={`rating-${hireId}`}
-          value={rating}
-          onChange={(event) => setRating(Number(event.target.value))}
-          className={inputClass}
-        >
-          {RATING_OPTIONS.map((value) => (
-            <option key={value} value={value}>
-              {value} {value === 1 ? "estrela" : "estrelas"}
-            </option>
-          ))}
-        </select>
+        <span className={labelClass}>Nota</span>
+        <StarRating value={rating} onChange={setRating} label="Nota" />
       </div>
       <div>
         <label htmlFor={`comment-${hireId}`} className={labelClass}>

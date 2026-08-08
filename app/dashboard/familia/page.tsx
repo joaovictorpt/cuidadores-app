@@ -5,9 +5,13 @@ import { redirect } from "next/navigation";
 
 import { LogoutButton } from "@/app/dashboard/_components/logout-button";
 import { authOptions } from "@/lib/auth";
-import { findMatchedCaregiverForFamily } from "@/lib/matching";
 import { prisma } from "@/lib/prisma";
-import { contentCardClass, heroAccentButtonClass, primaryButtonClass } from "@/lib/ui";
+import {
+  contentCardClass,
+  heroAccentButtonClass,
+  heroOutlineButtonClass,
+  primaryButtonClass,
+} from "@/lib/ui";
 
 export default async function DashboardFamiliaPage() {
   const session = await getServerSession(authOptions);
@@ -16,24 +20,15 @@ export default async function DashboardFamiliaPage() {
     redirect("/login");
   }
 
-  const [familyProfile, pendingCount, acceptedCount, matchedCaregiverUserId] =
-    await Promise.all([
-      prisma.familyProfile.findUnique({ where: { userId: session.user.id } }),
-      prisma.hire.count({
-        where: { familyId: session.user.id, status: HireStatus.PENDING },
-      }),
-      prisma.hire.count({
-        where: { familyId: session.user.id, status: HireStatus.ACCEPTED },
-      }),
-      findMatchedCaregiverForFamily(session.user.id),
-    ]);
-
-  const matchedCaregiver = matchedCaregiverUserId
-    ? await prisma.caregiverProfile.findUnique({
-        where: { userId: matchedCaregiverUserId },
-        select: { user: { select: { name: true } } },
-      })
-    : null;
+  const [familyProfile, pendingCount, acceptedCount] = await Promise.all([
+    prisma.familyProfile.findUnique({ where: { userId: session.user.id } }),
+    prisma.hire.count({
+      where: { familyId: session.user.id, status: HireStatus.PENDING },
+    }),
+    prisma.hire.count({
+      where: { familyId: session.user.id, status: HireStatus.ACCEPTED },
+    }),
+  ]);
 
   const missingCareTypes =
     familyProfile !== null && familyProfile.neededCareTypes.length === 0;
@@ -46,12 +41,17 @@ export default async function DashboardFamiliaPage() {
         </h1>
         <p className="mb-6 text-sm text-muted">Painel de controle da família</p>
 
-        <Link
-          href="/dashboard/familia/buscar"
-          className={`${heroAccentButtonClass} mb-6`}
-        >
-          Buscar cuidadores
-        </Link>
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+          <Link href="/dashboard/familia/buscar" className={heroAccentButtonClass}>
+            Buscar cuidadores
+          </Link>
+          <Link
+            href="/dashboard/familia/match-recomendado"
+            className={heroOutlineButtonClass}
+          >
+            Match recomendado
+          </Link>
+        </div>
 
         {missingCareTypes && (
           <div className="mb-6 rounded-card border border-primary/20 bg-primary-light p-6 text-center">
@@ -68,33 +68,19 @@ export default async function DashboardFamiliaPage() {
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Link
-            href="/dashboard/familia/contratacoes"
-            className={`${contentCardClass} block transition hover:border-primary motion-reduce:transition-none`}
-          >
-            <h2 className="font-display text-lg font-semibold text-ink">
-              Contratações
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              {pendingCount === 0 && acceptedCount === 0
-                ? "Nenhuma solicitação em andamento"
-                : `${pendingCount} pendente${pendingCount === 1 ? "" : "s"}, ${acceptedCount} aceita${acceptedCount === 1 ? "" : "s"}`}
-            </p>
-          </Link>
-
-          <Link
-            href="/dashboard/familia/match-recomendado"
-            className={`${contentCardClass} block transition hover:border-primary motion-reduce:transition-none`}
-          >
-            <h2 className="font-display text-lg font-semibold text-ink">
-              Match recomendado
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              {matchedCaregiver?.user.name ?? "Nenhum match ainda"}
-            </p>
-          </Link>
-        </div>
+        <Link
+          href="/dashboard/familia/contratacoes"
+          className={`${contentCardClass} block transition hover:border-primary motion-reduce:transition-none`}
+        >
+          <h2 className="font-display text-lg font-semibold text-ink">
+            Contratações
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            {pendingCount === 0 && acceptedCount === 0
+              ? "Nenhuma solicitação em andamento"
+              : `${pendingCount} pendente${pendingCount === 1 ? "" : "s"}, ${acceptedCount} aceita${acceptedCount === 1 ? "" : "s"}`}
+          </p>
+        </Link>
 
         <div className="mt-8 space-y-2">
           <Link

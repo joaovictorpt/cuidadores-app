@@ -606,6 +606,29 @@ Implementado sobre o model `Review` já existente no schema
   — visitantes não autenticados podem ver as avaliações de um cuidador antes 
   de se cadastrar.
 
+**`StarRating`** (`app/components/star-rating.tsx`): substitui o
+`<select>` de "Nota" em `review-form.tsx` por 5 estrelas clicáveis.
+Controlado (`value`/`onChange`, mesmo padrão de qualquer input controlado
+do projeto), sem estado de validação próprio — a regra "1 a 5, obrigatório"
+continua garantida estruturalmente (só existem botões de 1 a 5, nunca um
+valor fora desse intervalo ou vazio) e autoritativamente pelo Zod em
+`POST /api/reviews`, inalterado. Implementa o padrão ARIA "radio group"
+(https://www.w3.org/WAI/ARIA/apg/patterns/radio/): cada estrela é um
+`<button role="radio" aria-checked={...}>` com `aria-label` do tipo
+"Avaliar com N estrelas", dentro de um container `role="radiogroup"`.
+Roving `tabIndex` (só a estrela selecionada tem `tabIndex={0}`, as outras
+`-1`) — Tab entra/sai do grupo como uma parada só; dentro dele, as setas
+movem o foco *e* selecionam ao mesmo tempo (mesmo comportamento nativo de
+um `<input type="radio">` em grupo), e Enter/Espaço confirmam a estrela
+focada — de graça, por serem `<button>` nativos, sem handler extra
+necessário. O hover é só uma pré-visualização: um estado local
+(`hoverValue`) preenche as estrelas até o ponteiro sem chamar `onChange`;
+o valor efetivamente selecionado (por clique ou seta) é o que persiste
+quando o mouse sai do grupo. Colorido com `fill="currentColor"` +
+`text-primary`/`text-muted` — o mesmo truque de `currentColor` já usado por
+`ConnectionLine`/`MatchScoreRing`, não a utility `fill-primary` do
+Tailwind (nunca testada em produção neste projeto).
+
 ## Dashboards
 
 `app/dashboard/familia/page.tsx` e `app/dashboard/cuidador/page.tsx` eram só
@@ -615,16 +638,23 @@ continuam intactos abaixo dos cards. Sem rotas de API novas: os dois já são
 Server Components com `getServerSession`, então os dados são buscados via
 Prisma direto ali, junto com a sessão.
 
-- **Dashboard da família**:
+- **Dashboard da família**: simplificado para ficar simétrico ao do
+  cuidador (abaixo) — dois botões lado a lado no topo, "Buscar cuidadores"
+  (`heroAccentButtonClass`) e "Match recomendado" (`heroOutlineButtonClass`,
+  mesmo par filled+outline já usado em "Buscar famílias"/"Match perfeito"
+  do cuidador). O card "Match recomendado" que existia antes no grid
+  (mostrando o nome do cuidador recomendado direto na tela, via
+  `findMatchedCaregiverForFamily`) foi removido — nenhum dos dois botões
+  revela informação antes da pessoa clicar e navegar até a página de
+  destino, só o link em si. `findMatchedCaregiverForFamily`
+  (`lib/matching.ts`) continua existindo e em uso — só não é mais chamada
+  aqui, `/dashboard/familia/match-recomendado` (a página de destino) é
+  quem ainda a usa.
   - Card "Contratações": `prisma.hire.count` para `PENDING` e `ACCEPTED` da
     família logada (duas queries via `Promise.all`, não uma só com
-    `groupBy` — mais simples de ler para só dois status).
-  - Card "Match recomendado": `findMatchedCaregiverForFamily` (novo, em
-    `lib/matching.ts`) — extrai o loop "qual cuidador essa família recebeu"
-    que antes só existia dentro de `match-recomendado/page.tsx`, que agora
-    importa a mesma função em vez de reimplementar a busca. Ainda roda o
-    Gale-Shapley completo (`runStableMatchingForAllFamilies`) por trás; não
-    há cache, mesma ressalva de escala já documentada na seção de matching.
+    `groupBy` — mais simples de ler para só dois status). Único card que
+    restou no grid abaixo dos botões, renderizado sozinho (sem `grid-cols-2`
+    ao lado de outro card, já que agora é o único).
   - Banner de perfil incompleto: reaproveita o mesmo card
     (`border-primary/20 bg-primary-light`) e texto/link já usados em
     `/dashboard/familia/buscar` para o caso de `neededCareTypes` vazio, em
@@ -646,7 +676,7 @@ Prisma direto ali, junto com a sessão.
     hoje para apontar.
   - Card "Documentos": `prisma.document.count` por `caregiverId` do
     `CaregiverProfile` da sessão. Com zero documentos, o texto é um convite
-    ("envie para começar a ser verificado"), não um aviso de erro — só o
+    ("envie para começar a ser verificado(a)"), não um aviso de erro — só o
     card "Solicitações" usa a cor de alerta (`accent`), porque só ali "zero"
     seria uma notícia ruim; aqui zero documentos é só o estado inicial
     normal de uma conta nova.
