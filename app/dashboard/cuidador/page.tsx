@@ -16,10 +16,13 @@ export default async function DashboardCuidadorPage() {
     redirect("/login");
   }
 
-  const [caregiverProfile, pendingCount, ratings] = await Promise.all([
+  const [caregiverProfile, pendingCount, acceptedCount, ratings] = await Promise.all([
     prisma.caregiverProfile.findUnique({ where: { userId: session.user.id } }),
     prisma.hire.count({
       where: { caregiverId: session.user.id, status: HireStatus.PENDING },
+    }),
+    prisma.hire.count({
+      where: { caregiverId: session.user.id, status: HireStatus.ACCEPTED },
     }),
     prisma.review.findMany({
       where: { targetId: session.user.id },
@@ -73,6 +76,20 @@ export default async function DashboardCuidadorPage() {
               {pendingCount === 0
                 ? "Nenhuma solicitação pendente"
                 : `${pendingCount} aguardando sua resposta`}
+            </p>
+          </Link>
+
+          <Link
+            href="/dashboard/cuidador/trabalhos-ativos"
+            className={`${contentCardClass} block transition hover:border-primary motion-reduce:transition-none`}
+          >
+            <h2 className="font-display text-lg font-semibold text-ink">
+              Trabalhos ativos
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              {acceptedCount === 0
+                ? "Nenhum trabalho ativo"
+                : `${acceptedCount} em andamento`}
             </p>
           </Link>
 

@@ -478,6 +478,113 @@ mesmo padrão já usado pela home page, ver "Identidade do site"):
   código (perto de `STABLE_MATCH_VISUAL_SCORE`), só o texto visível na tela
   mudou.
 
+## Match perfeito / recomendado: badge textual → linha com dado real
+
+O badge genérico "Recomendado"/"Match estável" (texto fixo, sem dado real
+por trás) foi substituído, nas duas telas de match
+(`/dashboard/familia/match-recomendado`, `/dashboard/cuidador/match-perfeito`),
+por uma linha explicativa com fatos reais sobre o par família-cuidador —
+ex. "15.4 km de distância · Atende Idosos". Mesma regra de "nunca fabricar
+um número que pareça real" que já vale para `MatchScoreRing`/
+`ConnectionLine` (ver "Sistema de design"): como Gale-Shapley não produz um
+`matchScore` 0-1, a linha nunca mostra uma porcentagem de compatibilidade —
+só os dois fatores reais que já existiam nos profiles envolvidos (distância
+via Haversine, tipos de cuidado em comum).
+
+`findMatchedCaregiverForFamily` e `findMatchedFamiliesForCaregiver`
+(`lib/matching.ts`) ganharam `distanceKm`/`sharedCareTypes` no retorno:
+- `findMatchedCaregiverForFamily` mudou de assinatura — antes retornava só
+  `string | null` (o `caregiverUserId`), agora retorna
+  `MatchedCaregiverForFamily | null` (`{ caregiverUserId, distanceKm,
+  sharedCareTypes }`). Único consumidor é
+  `/dashboard/familia/match-recomendado` (confirmado via busca no código
+  antes da mudança — `GET /api/matching/stable-match` reimplementa esse
+  lookup inline e não foi tocada), então a troca de assinatura não teve
+  blast radius além dessa página.
+- `MatchedFamilyForCaregiver` (retorno de `findMatchedFamiliesForCaregiver`)
+  ganhou os dois campos como adição — não quebra
+  `GET /api/matching/stable-match/caregiver`, que só repassa o array como
+  JSON.
+- Ambas as funções agora também buscam o profile do lado "fixo" da consulta
+  (o cuidador logado em `findMatchedFamiliesForCaregiver`; a família logada
+  + o cuidador designado em `findMatchedCaregiverForFamily`) para poder
+  calcular `distanceKm` (Haversine, via `distanceKmOrNull` — wrapper
+  null-safe novo em `lib/matching.ts`) e a interseção de
+  `careTypes`/`neededCareTypes`. Na prática essas coordenadas e listas de
+  tipo sempre existem e o par sempre tem overlap para qualquer resultado
+  real do Gale-Shapley (`isEligiblePair` já exige isso pro par ser sequer
+  elegível), mas os tipos ficam `number | null`/`CareType[]` (nunca
+  assumindo non-null) porque essas funções buscam os profiles de novo, sem
+  reaproveitar essa garantia de outro lugar do código.
+
+`lib/care-types.ts` (novo): `CARE_TYPE_LABELS` + `formatCareTypes()` —
+extrai a constante que antes era um `Record` local duplicado em 6 arquivos
+(as duas páginas de busca, seus componentes de resultado, e as duas
+páginas de match). Só os arquivos tocados nesta tarefa (as duas páginas de
+match, as duas páginas de perfil somente-leitura, `contratacoes`,
+`solicitacoes`, `trabalhos-ativos` — ver seções abaixo) foram migrados
+para importar dali; os 6 arquivos anteriores continuam com sua cópia local
+intacta, fora do escopo do que motivou esse novo arquivo.
+
+## Página de perfil somente-leitura
+
+`app/dashboard/profile/family/[id]/page.tsx` e
+`app/dashboard/profile/caregiver/[id]/page.tsx` (novas): "quem é essa
+pessoa" — nome, cidade/estado, bio, tipos de cuidado (`neededCareTypes` ou
+`careTypes`, conforme o lado) e, só no lado cuidador, avaliação média
+(`calculateAverageRating`). `[id]` é sempre o `User.id` (o mesmo
+identificador já usado como `caregiverUserId`/`familyUserId` em
+`ContratarButton`/`InteresseButton`/`Hire.caregiverId`/`Hire.familyId`),
+não o `id` interno de `FamilyProfile`/`CaregiverProfile` — consistente com
+o resto do app, onde "a pessoa" é sempre identificada pelo `User.id`.
+
+- **Acesso**: exige sessão (qualquer role), mas **não** exige um `Hire`
+  prévio entre as duas partes — é a mesma informação que já aparece nos
+  cards de `/buscar` e das telas de match, só reorganizada como página
+  própria, então não há razão pra restringir mais do que a busca já
+  restringe. Perfil inexistente (`id` sem `FamilyProfile`/`CaregiverProfile`
+  correspondente) → `notFound()`.
+- **Nunca mostra `address` nem `phone`** — separação deliberada de
+  responsabilidade em relação a `/dashboard/hires/[id]`: esta página
+  responde "quem é essa pessoa" (dado disponível pra qualquer usuário
+  logado, sem relação com nenhum `Hire` específico); a tela de detalhe do
+  `Hire` responde "qual é o meu relacionamento com essa pessoa e como eu a
+  contato" (dado condicionado ao `status` daquele `Hire` — ver "Exposição
+  condicional de telefone"). Misturar os dois faria o telefone vazar
+  independente de status, quebrando a regra já existente ali.
+- `BackLink` aponta pra `/dashboard` (o despachante, ver "Navegação") em
+  vez de uma rota fixa de família/cuidador — diferente das outras páginas
+  de dashboard, esta pode ser aberta a partir de vários pontos diferentes
+  (detalhe de um `Hire`, lista de contratações/solicitações), então não há
+  uma única origem "correta" pra voltar; `/dashboard` sempre resolve pro
+  painel de quem está vendo, seja qual for o `role`.
+
+**Nome vira link**: em `/dashboard/hires/[id]`, `/dashboard/familia/contratacoes`
+e `/dashboard/cuidador/solicitacoes`, o nome da outra parte agora é um
+`<Link>` pra página de perfil correspondente (`hire.caregiverId`/
+`hire.familyId`, que já é exatamente o `User.id` esperado pelo `[id]` da
+rota).
+
+## Trabalhos ativos
+
+`app/dashboard/familia/trabalhos-ativos/page.tsx` e
+`app/dashboard/cuidador/trabalhos-ativos/page.tsx` (novas): lista filtrada
+de `Hire`s só com `status === ACCEPTED` — um subconjunto do que já aparece
+em `/contratacoes`/`/solicitacoes`, isolado numa página própria porque "o
+que está em andamento agora" é uma pergunta diferente de "todo o histórico
+de solicitações" (que mistura `PENDING`/`REJECTED`/`COMPLETED`/`CANCELLED`
+junto). Cada card é inteiramente um `<Link>` pra `/dashboard/hires/[id]` —
+não reimplementa botões de ação, contato, nem review, tudo isso já vive na
+tela de detalhe. Como não há nenhum botão dentro do card aqui (diferente
+de `/contratacoes`, que tem `HireActionButton`s dentro do card), o card
+inteiro pode ser clicável sem o problema de elemento interativo aninhado
+documentado em "Tela de detalhe de um Hire". Ordenado por `acceptedAt desc`.
+
+Cada dashboard (`app/dashboard/familia/page.tsx`,
+`app/dashboard/cuidador/page.tsx`) ganhou um card "Trabalhos ativos"
+(contagem de `ACCEPTED`) — ver "Dashboards" para onde cada um entra no
+grid de cada lado.
+
 ## Fluxo de contratação (Hire)
 
 Implementado como uma máquina de estados sobre o model `Hire` já existente no 
@@ -721,38 +828,46 @@ disponível" em vez de tentar calcular com dado faltando.
 aparece depois que a relação está confirmada — `ACCEPTED` ou `COMPLETED`
 — nunca em `PENDING` (ainda não houve aceite, não faz sentido dar contato
 antes disso) nem em `REJECTED`/`CANCELLED` (a relação não se concretizou).
-`lib/phone.ts` ganhou três helpers só de formatação/URI (nenhuma validação
+`lib/phone.ts` tem dois helpers só de formatação/URI (nenhuma validação
 nova — isso continua em `isCompletePhone`/`PHONE_REGEX`, já existentes):
 `formatPhoneForDisplay` (dígitos crus → `"(XX) XXXXX-XXXX"`, mesma máscara
 visual de `PhoneInput`, mas sem a dependência do react-number-format já
-que aqui é só leitura, nunca edição), `buildTelUri` (`tel:+55<dígitos>`) e
-`buildWhatsAppUrl` (`https://wa.me/55<dígitos>`) — os dois com um strip
-defensivo de qualquer caractere não-numérico antes de montar a URL, mesmo
-o telefone já sendo salvo só em dígitos.
+que aqui é só leitura, nunca edição) e `buildWhatsAppUrl`
+(`https://wa.me/55<dígitos>`, com um strip defensivo de qualquer caractere
+não-numérico antes de montar a URL, mesmo o telefone já sendo salvo só em
+dígitos).
 - **Como o telefone mora em `FamilyProfile`/`CaregiverProfile`, não em
   `User`** (ver "Autenticação"), as duas relações de `Hire` (`family`,
   `caregiver` — ambas apontam pra `User`) precisaram de um `select`
   aninhado (`familyProfile: { select: { phone: true } }` /
   `caregiverProfile: { select: { phone: true } }`) em todo lugar que
-  precisa mostrar telefone — `/dashboard/hires/[id]` e as duas listas.
-- **`/dashboard/hires/[id]`**: seção "Contato" com o número formatado como
-  link `tel:` e um botão separado pro WhatsApp (`target="_blank"`),
-  renderizada só quando `canShowContact` (`status === ACCEPTED ||
+  precisa mostrar telefone — hoje só `/dashboard/hires/[id]` (ver abaixo).
+- **`/dashboard/hires/[id]`, seção "Contato" — redesenhada, sem link `tel:`
+  como ação principal**: o número aparece como texto simples
+  (`formatPhoneForDisplay`, não mais um `<a href="tel:...">`), ao lado de
+  um botão **"Copiar número"**
+  (`app/dashboard/hires/[id]/_components/copy-phone-button.tsx`, Client
+  Component — usa `navigator.clipboard.writeText`, com o próprio botão
+  trocando o texto para "Copiado!" por 2 segundos via `setTimeout` antes de
+  reverter) e o botão de WhatsApp já existente (`target="_blank"`).
+  Motivo do link `tel:` ter saído: em desktop (o uso mais comum dessa tela)
+  um link `tel:` só funciona se o navegador tiver um discador configurado,
+  então na prática ele quase nunca fazia algo útil — copiar o número (para
+  colar num app de telefone/mensagens) e abrir o WhatsApp direto cobrem os
+  dois caminhos reais que alguém segue a partir daqui. `buildTelUri`
+  (`lib/phone.ts`) foi removido depois dessa mudança — era o único
+  consumidor que restava.
+  Continua renderizada só quando `canShowContact` (`status === ACCEPTED ||
   status === COMPLETED`) **e** o telefone da outra parte existir — perfis
   antigos ou incompletos sem telefone salvo simplesmente não mostram a
-  seção, em vez de renderizar um link quebrado.
-- **`/dashboard/familia/contratacoes` e `/dashboard/cuidador/solicitacoes`**:
-  um link "Contato" (`tel:` direto, sem WhatsApp — esse fica reservado pra
-  tela de detalhe) ao lado dos botões de ação, mas **só quando
-  `status === ACCEPTED`** — de propósito, não quando `COMPLETED` também,
-  já que o contato rápido pela lista serve principalmente pra combinar o
-  serviço enquanto ele está em andamento; uma vez `COMPLETED`, quem quiser
-  o telefone ainda pode abrir "Ver detalhes". Isso mudou a condição que já
-  envolvia o bloco de botões de ação: antes só renderizava esse bloco
-  quando `actions.length > 0`, agora é `actions.length > 0 || showContact`,
-  já que em teoria um `Hire` `ACCEPTED` sempre tem pelo menos uma ação
-  disponível (`getAvailableActions`), mas a condição fica correta mesmo se
-  isso um dia deixar de ser verdade.
+  seção.
+- **`/dashboard/familia/contratacoes` e `/dashboard/cuidador/solicitacoes`
+  perderam o link rápido "Contato"** que existia ao lado dos botões de ação
+  quando `status === ACCEPTED` — duplicava (com pior UX, só `tel:`, sem
+  copiar/WhatsApp) o que a seção "Contato" de `/dashboard/hires/[id]` já
+  resolve melhor; "Ver detalhes" já leva pra lá. A condição do bloco de
+  botões de ação voltou a ser só `actions.length > 0` (antes tinha virado
+  `actions.length > 0 || showContact` quando o link de contato existia).
 
 ## Dashboards
 
@@ -777,9 +892,10 @@ Prisma direto ali, junto com a sessão.
   quem ainda a usa.
   - Card "Contratações": `prisma.hire.count` para `PENDING` e `ACCEPTED` da
     família logada (duas queries via `Promise.all`, não uma só com
-    `groupBy` — mais simples de ler para só dois status). Único card que
-    restou no grid abaixo dos botões, renderizado sozinho (sem `grid-cols-2`
-    ao lado de outro card, já que agora é o único).
+    `groupBy` — mais simples de ler para só dois status). Fica num grid de
+    2 colunas ao lado do card "Trabalhos ativos" (ver "Trabalhos ativos"
+    abaixo) — reaproveita o mesmo `acceptedCount` já buscado aqui, nenhuma
+    query nova neste lado.
   - Banner de perfil incompleto: reaproveita o mesmo card
     (`border-primary/20 bg-primary-light`) e texto/link já usados em
     `/dashboard/familia/buscar` para o caso de `neededCareTypes` vazio, em
@@ -791,6 +907,11 @@ Prisma direto ali, junto com a sessão.
     pelo menos 1 pendente, o card troca para `border-accent`/`bg-accent-light`
     (chamando atenção de que precisa de ação); com zero, é um
     `contentCardClass` normal.
+  - Card "Trabalhos ativos": `prisma.hire.count` de `ACCEPTED` — query nova
+    neste lado (o dashboard do cuidador antes só buscava `pendingCount`; o
+    da família já buscava `acceptedCount` para o texto do card
+    "Contratações", então não precisou de query nova). Ver "Trabalhos
+    ativos" abaixo.
   - Card "Sua avaliação": média + total via `calculateAverageRating`, nova
     função em `lib/reviews.ts` — antes esse cálculo (reduce + divisão) vivia
     duplicado em `GET /api/reviews` e em `lib/matching.ts`

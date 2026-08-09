@@ -6,15 +6,10 @@ import { AvatarPlaceholder } from "@/app/dashboard/familia/_components/avatar-pl
 import { ConnectionLine } from "@/app/dashboard/familia/_components/connection-line";
 import { ContratarButton } from "@/app/dashboard/familia/_components/contratar-button";
 import { authOptions } from "@/lib/auth";
+import { CARE_TYPE_LABELS, formatCareTypes } from "@/lib/care-types";
 import { findMatchedCaregiverForFamily } from "@/lib/matching";
 import { prisma } from "@/lib/prisma";
 import { calculateAverageRating } from "@/lib/reviews";
-
-const CARE_TYPE_LABELS: Record<string, string> = {
-  ELDERLY: "Idosos",
-  CHILD: "Crianças",
-  SPECIAL_NEEDS: "Necessidades especiais",
-};
 
 // The Gale-Shapley stable match doesn't produce a 0-1 compatibility score
 // like the weighted search does (see lib/matching.ts) -- it's a categorical
@@ -32,11 +27,11 @@ export default async function MatchRecomendadoPage() {
     redirect("/login");
   }
 
-  const matchedCaregiverUserId = await findMatchedCaregiverForFamily(session.user.id);
+  const matchedCaregiver = await findMatchedCaregiverForFamily(session.user.id);
 
-  const caregiverProfile = matchedCaregiverUserId
+  const caregiverProfile = matchedCaregiver
     ? await prisma.caregiverProfile.findUnique({
-        where: { userId: matchedCaregiverUserId },
+        where: { userId: matchedCaregiver.caregiverUserId },
         include: {
           user: {
             select: { name: true, reviewsReceived: { select: { rating: true } } },
@@ -67,28 +62,30 @@ export default async function MatchRecomendadoPage() {
           </p>
         )}
 
-        {caregiverProfile && (
+        {caregiverProfile && matchedCaregiver && (
           <div className="rounded-card border border-muted/20 bg-white p-6 shadow-sm sm:p-8">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <AvatarPlaceholder name={caregiverProfile.user.name} />
-                <div>
-                  <h2 className="font-display text-xl font-semibold text-ink">
-                    {caregiverProfile.user.name ?? "Cuidador"}
-                  </h2>
-                  {caregiverProfile.bio && (
-                    <p className="mt-1 text-sm text-muted">{caregiverProfile.bio}</p>
-                  )}
-                  <p className="mt-2 text-xs text-muted">
-                    {caregiverProfile.careTypes
-                      .map((type) => CARE_TYPE_LABELS[type] ?? type)
-                      .join(", ")}
-                  </p>
-                </div>
+            <div className="flex items-start gap-4">
+              <AvatarPlaceholder name={caregiverProfile.user.name} />
+              <div>
+                <h2 className="font-display text-xl font-semibold text-ink">
+                  {caregiverProfile.user.name ?? "Cuidador"}
+                </h2>
+                {caregiverProfile.bio && (
+                  <p className="mt-1 text-sm text-muted">{caregiverProfile.bio}</p>
+                )}
+                <p className="mt-2 text-xs text-muted">
+                  {caregiverProfile.careTypes
+                    .map((type) => CARE_TYPE_LABELS[type] ?? type)
+                    .join(", ")}
+                </p>
+                <p className="mt-2 font-mono text-xs text-ink/80">
+                  {matchedCaregiver.distanceKm !== null
+                    ? `${matchedCaregiver.distanceKm.toFixed(1)} km de distância`
+                    : "Distância não disponível"}
+                  {matchedCaregiver.sharedCareTypes.length > 0 &&
+                    ` · Atende ${formatCareTypes(matchedCaregiver.sharedCareTypes)}`}
+                </p>
               </div>
-              <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">
-                Recomendado
-              </span>
             </div>
 
             <dl className="mt-5 grid grid-cols-2 gap-4">
@@ -112,7 +109,7 @@ export default async function MatchRecomendadoPage() {
 
             <div className="mt-5 flex items-center justify-between">
               <ConnectionLine matchScore={STABLE_MATCH_VISUAL_SCORE} />
-              <ContratarButton caregiverUserId={matchedCaregiverUserId!} />
+              <ContratarButton caregiverUserId={matchedCaregiver.caregiverUserId} />
             </div>
           </div>
         )}

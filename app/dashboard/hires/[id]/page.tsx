@@ -1,17 +1,15 @@
 import { HireStatus } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { StarRating } from "@/app/components/star-rating";
 import { BackLink } from "@/app/dashboard/_components/back-link";
+import { CopyPhoneButton } from "@/app/dashboard/hires/[id]/_components/copy-phone-button";
 import { authOptions } from "@/lib/auth";
 import { formatDuration } from "@/lib/duration";
 import { getHireDirectionLabel, HIRE_STATUS_LABELS } from "@/lib/hire-labels";
-import {
-  buildTelUri,
-  buildWhatsAppUrl,
-  formatPhoneForDisplay,
-} from "@/lib/phone";
+import { buildWhatsAppUrl, formatPhoneForDisplay } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { secondaryButtonClass } from "@/lib/ui";
@@ -73,6 +71,9 @@ export default async function HireDetailPage({
   const otherPartyPhone = isFamily
     ? hire.caregiver.caregiverProfile?.phone
     : hire.family.familyProfile?.phone;
+  const otherPartyProfileHref = isFamily
+    ? `/dashboard/profile/caregiver/${hire.caregiverId}`
+    : `/dashboard/profile/family/${hire.familyId}`;
   const backHref = isFamily
     ? "/dashboard/familia/contratacoes"
     : "/dashboard/cuidador/solicitacoes";
@@ -98,7 +99,9 @@ export default async function HireDetailPage({
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="font-display text-2xl font-semibold text-ink">
-                {otherParty.name ?? otherParty.email}
+                <Link href={otherPartyProfileHref} className="hover:underline">
+                  {otherParty.name ?? otherParty.email}
+                </Link>
               </h1>
               <span className="mt-1 inline-block rounded-full border border-muted/30 px-2 py-0.5 text-xs text-muted">
                 {getHireDirectionLabel(hire.initiatedBy, session.user.role)}
@@ -115,12 +118,10 @@ export default async function HireDetailPage({
                 Contato
               </h2>
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <a
-                  href={buildTelUri(otherPartyPhone)}
-                  className="font-mono text-sm font-medium text-primary hover:underline"
-                >
+                <span className="font-mono text-sm font-medium text-ink">
                   {formatPhoneForDisplay(otherPartyPhone)}
-                </a>
+                </span>
+                <CopyPhoneButton phone={formatPhoneForDisplay(otherPartyPhone)} />
                 <a
                   href={buildWhatsAppUrl(otherPartyPhone)}
                   target="_blank"

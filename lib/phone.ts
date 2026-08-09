@@ -17,10 +17,10 @@ export function isCompletePhone(digits: string): boolean {
   return PHONE_REGEX.test(digits);
 }
 
-// Strips anything but digits -- defensive belt for the three helpers below:
+// Strips anything but digits -- defensive belt for the two helpers below:
 // the app only ever stores digits-only phones (see PhoneInput), but these
-// build user-facing URIs, so a stray formatting character slipping through
-// shouldn't produce a broken tel:/wa.me link.
+// build user-facing strings/URIs, so a stray formatting character slipping
+// through shouldn't produce a broken display value or wa.me link.
 function sanitizePhoneDigits(phone: string): string {
   return phone.replace(/\D/g, "");
 }
@@ -39,12 +39,6 @@ export function formatPhoneForDisplay(phone: string): string {
   }
 
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-}
-
-// tel: URI, Brazil country code (+55) prepended -- phone is always stored
-// as DDD + number only, never with a country code.
-export function buildTelUri(phone: string): string {
-  return `tel:+55${sanitizePhoneDigits(phone)}`;
 }
 
 // wa.me deep link -- same +55<digits> shape WhatsApp's own link format

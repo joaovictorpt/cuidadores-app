@@ -1,23 +1,20 @@
-import { Role } from "@prisma/client";
+import { HireStatus, Role } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BackLink } from "@/app/dashboard/_components/back-link";
-import { HireActionButton } from "@/app/dashboard/_components/hire-action-button";
 import { authOptions } from "@/lib/auth";
 import { formatCareTypes } from "@/lib/care-types";
-import { getAvailableActions } from "@/lib/hire-transitions";
-import {
-  getHireDirectionLabel,
-  HIRE_ACTION_LABELS,
-  HIRE_STATUS_LABELS,
-} from "@/lib/hire-labels";
+import { getHireDirectionLabel } from "@/lib/hire-labels";
 import { prisma } from "@/lib/prisma";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { metaTextClass } from "@/lib/ui";
 
-export default async function SolicitacoesPage() {
+// Filtered view of /dashboard/cuidador/solicitacoes showing only the
+// currently-in-progress relationships (status ACCEPTED) -- mirrors
+// /dashboard/familia/trabalhos-ativos on the other side of the graph.
+export default async function TrabalhosAtivosPage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -25,7 +22,7 @@ export default async function SolicitacoesPage() {
   }
 
   const hires = await prisma.hire.findMany({
-    where: { caregiverId: session.user.id },
+    where: { caregiverId: session.user.id, status: HireStatus.ACCEPTED },
     include: {
       family: {
         select: {
@@ -37,7 +34,7 @@ export default async function SolicitacoesPage() {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { acceptedAt: "desc" },
   });
 
   return (
@@ -46,22 +43,17 @@ export default async function SolicitacoesPage() {
         <BackLink href="/dashboard/cuidador" />
 
         <h1 className="mb-6 font-display text-3xl font-semibold text-ink">
-          Minhas solicitações
+          Trabalhos ativos
         </h1>
 
         {hires.length === 0 && (
           <p className="text-sm text-muted">
-            Você ainda não tem nenhuma solicitação.
+            Nenhum trabalho ativo no momento.
           </p>
         )}
 
         <div className="space-y-4">
           {hires.map((hire) => {
-            const actions = getAvailableActions(
-              hire.status,
-              Role.CAREGIVER,
-              hire.initiatedBy
-            );
             const neededCareTypes = hire.family.familyProfile?.neededCareTypes ?? [];
             const location = [
               hire.family.familyProfile?.city,
@@ -71,19 +63,15 @@ export default async function SolicitacoesPage() {
               .join(", ");
 
             return (
-              <div
+              <Link
                 key={hire.id}
-                className="rounded-card border border-muted/20 bg-white p-6 shadow-sm"
+                href={`/dashboard/hires/${hire.id}`}
+                className="block rounded-card border border-muted/20 bg-white p-6 shadow-sm transition hover:border-primary motion-reduce:transition-none"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h2 className="font-display text-lg font-semibold text-ink">
-                      <Link
-                        href={`/dashboard/profile/family/${hire.familyId}`}
-                        className="hover:underline"
-                      >
-                        {hire.family.name ?? hire.family.email}
-                      </Link>
+                      {hire.family.name ?? hire.family.email}
                     </h2>
                     <p className="mt-1 text-xs text-muted">
                       {neededCareTypes.length > 0
@@ -91,45 +79,25 @@ export default async function SolicitacoesPage() {
                         : "Tipos de cuidado não informados"}
                       {location && ` · ${location}`}
                     </p>
-                    {hire.message && (
-                      <p className="mt-1 text-sm text-muted">{hire.message}</p>
-                    )}
                     <div className="mt-1 flex items-center gap-2">
                       <span className="rounded-full border border-muted/30 px-2 py-0.5 text-xs text-muted">
                         {getHireDirectionLabel(hire.initiatedBy, Role.CAREGIVER)}
                       </span>
-                      <span
-                        className={metaTextClass}
-                        title={hire.createdAt.toLocaleString("pt-BR")}
-                      >
-                        {formatRelativeTime(hire.createdAt)}
-                      </span>
+                      {hire.acceptedAt && (
+                        <span
+                          className={metaTextClass}
+                          title={hire.acceptedAt.toLocaleString("pt-BR")}
+                        >
+                          Aceito {formatRelativeTime(hire.acceptedAt)}
+                        </span>
+                      )}
                     </div>
-                    <Link
-                      href={`/dashboard/hires/${hire.id}`}
-                      className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-                    >
-                      Ver detalhes
-                    </Link>
                   </div>
                   <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 text-sm font-medium text-primary">
-                    {HIRE_STATUS_LABELS[hire.status]}
+                    Em andamento
                   </span>
                 </div>
-
-                {actions.length > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {actions.map((action) => (
-                      <HireActionButton
-                        key={action}
-                        hireId={hire.id}
-                        targetStatus={action}
-                        label={HIRE_ACTION_LABELS[action] ?? action}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              </Link>
             );
           })}
         </div>

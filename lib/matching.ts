@@ -57,6 +57,24 @@ export type RankedFamily<F extends FamilyCandidate = FamilyCandidate> = {
   matchScore: number;
 };
 
+// Null-safe Haversine wrapper -- coordinates are always optional (Float?)
+// on both profile models, so any caller working with a raw Prisma record
+// (rather than an already-validated matching candidate) needs this guard.
+// Used by the "matched pair" lookups below, whose distanceKm is display-only
+// and thus allowed to be "not available" instead of throwing.
+function distanceKmOrNull(
+  aLat: number | null | undefined,
+  aLon: number | null | undefined,
+  bLat: number | null | undefined,
+  bLon: number | null | undefined
+): number | null {
+  if (aLat == null || aLon == null || bLat == null || bLon == null) {
+    return null;
+  }
+
+  return haversineDistanceKm(aLat, aLon, bLat, bLon);
+}
+
 // Shared eligibility rule, used both when a family is looking for
 // caregivers and when a caregiver is looking for families: both directions
 // of the bipartite graph must agree on which edges exist at all, otherwise
@@ -443,31 +461,80 @@ export async function runStableMatchingForAllFamilies(): Promise<
 // single family cares about -- shared by /dashboard/familia/match-recomendado
 // and the family dashboard's summary card, so the "which caregiver did I get
 // matched with" lookup only lives in one place.
+//
+// distanceKm/sharedCareTypes are display-only extras (not used by the
+// matching algorithm itself, which already ran by the time this is
+// computed) -- added so match-recomendado can show a real fact instead of a
+// fabricated "Recomendado" badge. Both are effectively guaranteed
+// non-null/non-empty for an actual stable match (isEligiblePair already
+// required non-null coordinates and overlapping care types for this pair to
+// be eligible in the first place), but typed loosely since this reads the
+// profiles fresh rather than reusing that guarantee.
+export type MatchedCaregiverForFamily = {
+  caregiverUserId: string;
+  distanceKm: number | null;
+  sharedCareTypes: CareType[];
+};
+
 export async function findMatchedCaregiverForFamily(
   familyUserId: string
-): Promise<string | null> {
+): Promise<MatchedCaregiverForFamily | null> {
   const matchesByCaregiver = await runStableMatchingForAllFamilies();
 
+  let matchedCaregiverUserId: string | null = null;
   for (const [caregiverUserId, familyUserIds] of matchesByCaregiver) {
     if (familyUserIds.includes(familyUserId)) {
-      return caregiverUserId;
+      matchedCaregiverUserId = caregiverUserId;
+      break;
     }
   }
 
-  return null;
+  if (!matchedCaregiverUserId) {
+    return null;
+  }
+
+  const [familyProfile, caregiverProfile] = await Promise.all([
+    prisma.familyProfile.findUnique({
+      where: { userId: familyUserId },
+      select: { latitude: true, longitude: true, neededCareTypes: true },
+    }),
+    prisma.caregiverProfile.findUnique({
+      where: { userId: matchedCaregiverUserId },
+      select: { latitude: true, longitude: true, careTypes: true },
+    }),
+  ]);
+
+  const distanceKm = distanceKmOrNull(
+    familyProfile?.latitude,
+    familyProfile?.longitude,
+    caregiverProfile?.latitude,
+    caregiverProfile?.longitude
+  );
+
+  const sharedCareTypes =
+    familyProfile && caregiverProfile
+      ? caregiverProfile.careTypes.filter((type) =>
+          familyProfile.neededCareTypes.includes(type)
+        )
+      : [];
+
+  return { caregiverUserId: matchedCaregiverUserId, distanceKm, sharedCareTypes };
 }
 
 // Privacy-limited shape for a family matched to a caregiver via stable
 // matching -- same field set as GET /api/search/families (no `address`,
-// see FamilyForDisplay), but without `distanceKm`/`matchScore` since
-// Gale-Shapley doesn't produce a comparable 0-1 score the way the weighted
-// search does (same reasoning as the family-side stable-match route).
+// see FamilyForDisplay), but without a 0-1 `matchScore` since Gale-Shapley
+// doesn't produce one the way the weighted search does (same reasoning as
+// the family-side stable-match route). distanceKm/sharedCareTypes are the
+// same display-only extras as MatchedCaregiverForFamily above.
 export type MatchedFamilyForCaregiver = {
   familyId: string;
   name: string | null;
   city: string | null;
   state: string | null;
   neededCareTypes: CareType[];
+  distanceKm: number | null;
+  sharedCareTypes: CareType[];
 };
 
 // Mirrors findMatchedCaregiverForFamily on the other side of the graph --
@@ -486,16 +553,39 @@ export async function findMatchedFamiliesForCaregiver(
     return [];
   }
 
-  const familyProfiles = await prisma.familyProfile.findMany({
-    where: { userId: { in: matchedFamilyUserIds } },
-    include: { user: { select: { name: true } } },
-  });
+  const [caregiverProfile, familyProfiles] = await Promise.all([
+    prisma.caregiverProfile.findUnique({
+      where: { userId: caregiverUserId },
+      select: { latitude: true, longitude: true, careTypes: true },
+    }),
+    prisma.familyProfile.findMany({
+      where: { userId: { in: matchedFamilyUserIds } },
+      include: { user: { select: { name: true } } },
+    }),
+  ]);
 
-  return familyProfiles.map((profile) => ({
-    familyId: profile.userId,
-    name: profile.user.name,
-    city: profile.city,
-    state: profile.state,
-    neededCareTypes: profile.neededCareTypes,
-  }));
+  return familyProfiles.map((profile) => {
+    const distanceKm = distanceKmOrNull(
+      profile.latitude,
+      profile.longitude,
+      caregiverProfile?.latitude,
+      caregiverProfile?.longitude
+    );
+
+    const sharedCareTypes = caregiverProfile
+      ? profile.neededCareTypes.filter((type) =>
+          caregiverProfile.careTypes.includes(type)
+        )
+      : [];
+
+    return {
+      familyId: profile.userId,
+      name: profile.user.name,
+      city: profile.city,
+      state: profile.state,
+      neededCareTypes: profile.neededCareTypes,
+      distanceKm,
+      sharedCareTypes,
+    };
+  });
 }

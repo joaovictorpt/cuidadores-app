@@ -68,19 +68,35 @@ export default async function DashboardFamiliaPage() {
           </div>
         )}
 
-        <Link
-          href="/dashboard/familia/contratacoes"
-          className={`${contentCardClass} block transition hover:border-primary motion-reduce:transition-none`}
-        >
-          <h2 className="font-display text-lg font-semibold text-ink">
-            Contratações
-          </h2>
-          <p className="mt-1 text-sm text-muted">
-            {pendingCount === 0 && acceptedCount === 0
-              ? "Nenhuma solicitação em andamento"
-              : `${pendingCount} pendente${pendingCount === 1 ? "" : "s"}, ${acceptedCount} aceita${acceptedCount === 1 ? "" : "s"}`}
-          </p>
-        </Link>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Link
+            href="/dashboard/familia/contratacoes"
+            className={`${contentCardClass} block transition hover:border-primary motion-reduce:transition-none`}
+          >
+            <h2 className="font-display text-lg font-semibold text-ink">
+              Contratações
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              {pendingCount === 0 && acceptedCount === 0
+                ? "Nenhuma solicitação em andamento"
+                : `${pendingCount} pendente${pendingCount === 1 ? "" : "s"}, ${acceptedCount} aceita${acceptedCount === 1 ? "" : "s"}`}
+            </p>
+          </Link>
+
+          <Link
+            href="/dashboard/familia/trabalhos-ativos"
+            className={`${contentCardClass} block transition hover:border-primary motion-reduce:transition-none`}
+          >
+            <h2 className="font-display text-lg font-semibold text-ink">
+              Trabalhos ativos
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              {acceptedCount === 0
+                ? "Nenhum trabalho ativo"
+                : `${acceptedCount} em andamento`}
+            </p>
+          </Link>
+        </div>
 
         <div className="mt-8 space-y-2">
           <Link
