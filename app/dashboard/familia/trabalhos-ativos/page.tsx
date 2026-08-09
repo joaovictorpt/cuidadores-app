@@ -63,15 +63,19 @@ export default async function TrabalhosAtivosPage() {
               );
 
             return (
-              <Link
+              <div
                 key={hire.id}
-                href={`/dashboard/hires/${hire.id}`}
-                className="block rounded-card border border-muted/20 bg-white p-6 shadow-sm transition hover:border-primary motion-reduce:transition-none"
+                className="rounded-card border border-muted/20 bg-white p-6 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h2 className="font-display text-lg font-semibold text-ink">
-                      {hire.caregiver.name ?? hire.caregiver.email}
+                      <Link
+                        href={`/dashboard/profile/caregiver/${hire.caregiverId}`}
+                        className="hover:underline"
+                      >
+                        {hire.caregiver.name ?? hire.caregiver.email}
+                      </Link>
                     </h2>
                     <p className="mt-1 text-xs text-muted">
                       {averageRating !== null
@@ -92,12 +96,18 @@ export default async function TrabalhosAtivosPage() {
                         </span>
                       )}
                     </div>
+                    <Link
+                      href={`/dashboard/hires/${hire.id}`}
+                      className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+                    >
+                      Ver detalhes
+                    </Link>
                   </div>
                   <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 text-sm font-medium text-primary">
                     Em andamento
                   </span>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

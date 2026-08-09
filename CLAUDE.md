@@ -116,6 +116,12 @@ leitura consistente com o schema atual sem adicionar uma coluna nova.
   formulário só mostrava o texto genérico "Dados inválidos", nunca a
   mensagem específica de qual campo falhou (idade mínima, campo vazio,
   etc.), mesmo a API já retornando isso em `issues`.
+- **`hourlyBudget` (só branch `FAMILY`, opcional)**: "Quanto você pode
+  pagar por hora (R$)" — mesmo padrão de campo do `hourlyRate` do cuidador
+  (`input type="number"`, `min="0"`, `step="0.01"`, `onWheel={blurOnWheel}`,
+  ver `lib/ui.ts`), inclusive o mesmo `z.number().positive().optional()`
+  no Zod. Alimenta o componente de preço do matching quando preenchido —
+  ver `computePriceScore` em "Algoritmo de matching".
 
 ## Estado e cidade (combobox com busca, não select nem texto livre)
 
@@ -281,6 +287,14 @@ essa inconsistência uma vez.
 - Páginas: `app/dashboard/cuidador/perfil/page.tsx` e
   `app/dashboard/familia/perfil/page.tsx`, cada uma com Server Component
   (busca via Prisma direto) + Client Component (formulário).
+- **`FamilyProfile.hourlyBudget`**: campo opcional no formulário de edição
+  (`profile-form.tsx` da família), mesmo padrão de "Quanto você pode pagar
+  por hora (R$)" já usado no cadastro (ver "Cadastro" abaixo) — `input
+  type="number"`, sem setinhas (`blurOnWheel`, `lib/ui.ts`), sem vírgula
+  como separador decimal. Segue a mesma convenção "vazio = não alterar" já
+  usada pelos outros campos opcionais desse formulário
+  (`form.hourlyBudget ? Number(form.hourlyBudget) : undefined` no corpo do
+  `PATCH`). Ver "Algoritmo de matching" para o que esse campo alimenta.
 
 ## Geolocalização
 
@@ -303,6 +317,12 @@ essa inconsistência uma vez.
 
 - `FamilyProfile.neededCareTypes: CareType[]` — tipos de cuidado que a
   família procura (mesmo enum `CareType` já usado em `CaregiverProfile.careTypes`).
+- `FamilyProfile.hourlyBudget: Decimal? @db.Decimal(10,2)` — quanto a
+  família pode pagar por hora, mesmo tipo/precisão de
+  `CaregiverProfile.hourlyRate` (migration `add_family_hourly_budget`).
+  Opcional: uma família pode nunca preencher esse campo, e o componente de
+  preço do matching (`computePriceScore`, abaixo) foi desenhado desde o
+  início para funcionar sem ele.
 - `lib/matching-config.ts`: pesos configuráveis (`distance`,
   `careTypeCompatibility`, `rating`, `price` — devem somar 1.0),
   `maxDistanceKm` (raio de elegibilidade, hoje 50km),
@@ -318,6 +338,38 @@ essa inconsistência uma vez.
     do cuidador, que também precisa mostrar nome/cidade/estado).
   - `computeMatchScore`: soma ponderada (*weighted sum model*) dos 4
     critérios normalizados para 0-1 cada.
+  - **`computePriceScore(caregiverRate, familyBudget, candidateRatesForFallback?)`**
+    — extraída de dentro de `computeMatchScore` (era uma função interna sem
+    conhecimento de `hourlyBudget`) para materializar as **três camadas de
+    fallback** do componente de preço, em ordem de prioridade:
+    1. **Orçamento real declarado** (`familyBudget !== null`): compara o
+       `hourlyRate` do cuidador contra o `hourlyBudget` da família —
+       `rate <= budget` pontua 1.0 (cabe no orçamento); acima do orçamento,
+       decai linearmente e satura em 0 quando `rate` é o dobro do `budget`
+       (`rate - budget >= budget`). É a única camada que reflete uma
+       preferência real informada pela família, não uma comparação relativa
+       entre cuidadores.
+    2. **Normalização relativa** (sem orçamento, mas com um pool de
+       `candidateRatesForFallback` fornecido pelo chamador): comportamento
+       original do projeto — min/max entre as tarifas dos candidatos
+       elegíveis, cuidador mais barato do grupo pontua 1.0, mais caro
+       pontua 0.
+    3. **Neutro** (nem orçamento nem pool): reaproveita
+       `matchingConfig.defaultRatingWhenNoReviews` (0.5) em vez de um novo
+       "magic number" — mesmo significado estrutural do rating sem reviews:
+       "sem dado, não pontuar nem penalizar".
+    `caregiverRate === null` (cuidador sem `hourlyRate` cadastrado) também
+    cai direto no neutro, independente de qual camada se aplicaria
+    normalmente — não há tarifa para comparar contra nada.
+    **As duas direções do grafo usam camadas diferentes de propósito**:
+    `rankCaregiversAgainstList` (família buscando cuidadores) passa o pool
+    de candidatos como fallback, então uma família sem orçamento declarado
+    ainda vê preços relativos entre os cuidadores disponíveis.
+    `rankFamiliesAgainstList` (cuidador buscando famílias) **não** passa
+    esse pool — comparar o preço de um cuidador contra o de *outros*
+    cuidadores não faz sentido do ponto de vista de uma família olhando
+    esse cuidador, então sem orçamento declarado o score cai direto pra
+    neutro, camada 3.
   - `rankCaregiversForFamily`: busca real usada em `GET /api/search/caregivers`.
   - `rankFamiliesForCaregiver`: o mesmo do outro lado do grafo, busca real
     usada em `GET /api/search/families` (ver "Busca de famílias pelo
@@ -327,11 +379,24 @@ essa inconsistência uma vez.
     `buildCaregiverPreferences`, que antes tinha essa lógica inline
     duplicada em relação ao que a busca do cuidador precisava, espelhando
     o par `rankCaregiversAgainstList`/`rankCaregiversForFamily` que já
-    existia do lado família.
+    existia do lado família. Deixou de receber `allCaregivers` como
+    parâmetro (e `rankFamiliesForCaregiver` deixou de buscar
+    `fetchAllCaregiversForMatching()`) no momento em que
+    `computePriceScore` ganhou a camada de orçamento — esse parâmetro só
+    existia pra alimentar a normalização relativa (camada 2), que este
+    lado do grafo deliberadamente não usa mais (ver acima); mantê-lo sem
+    uso seria um parâmetro morto.
   - `buildFamilyPreferences` / `buildCaregiverPreferences`: listas de
-    preferência para o Gale-Shapley, reaproveitando a mesma fórmula de score
-    nos dois sentidos (consequência: do lado do cuidador, `rating` e `price`
-    acabam constantes — só distância e compatibilidade discriminam).
+    preferência para o Gale-Shapley, reaproveitando a mesma fórmula de
+    score nos dois sentidos. Consequência, do lado do cuidador
+    (`buildCaregiverPreferences`): `rating` continua sempre constante entre
+    as famílias candidatas de um mesmo cuidador (é uma propriedade do
+    cuidador, não da família); `price`, desde o `hourlyBudget`, só
+    permanece constante quando nenhuma das famílias candidatas declarou
+    orçamento — uma família com `hourlyBudget` produz uma comparação real
+    que varia por família. Distância e compatibilidade de tipo de cuidado
+    sempre variam e continuam sendo o principal fator de desempate nesse
+    lado.
 - `lib/gale-shapley.ts`: `stableMatching()` genérica, implementando a
   variante **hospital-residents** (capacidade > 1 do lado que recebe —
   o mesmo tipo usado em alocação de residência médica), não o problema
@@ -357,7 +422,19 @@ essa inconsistência uma vez.
   imprimem resultado para inspeção manual, limpam ao final). O de
   Gale-Shapley inclui um verificador de pares bloqueantes independente, que
   re-deriva estabilidade a partir das listas de preferência brutas em vez de
-  confiar no bookkeeping interno do algoritmo.
+  confiar no bookkeeping interno do algoritmo. `test-matching.ts` ganhou
+  duas checagens específicas do `computePriceScore` com `hourlyBudget`: uma
+  bateria pura (`testComputePriceScore`, sem banco) cobrindo as três
+  camadas de fallback com valores esperados fechados, e um cenário
+  ponta-a-ponta (`seedBudgetScenario`) — uma família com `hourlyBudget`
+  real e dois cuidadores nas mesmas coordenadas/tipo/avaliação (só o
+  `hourlyRate` difere), provando que o campo realmente flui do Prisma até
+  o `matchScore` final via `rankCaregiversForFamily`, não só em isolamento.
+  Esse cenário é limpo (`cleanup()`) **antes** do cenário original rodar —
+  os dois reaproveitam as mesmas coordenadas fictícias, então deixar os
+  cuidadores do cenário de orçamento no banco vazaria como candidatos
+  espúrios na segunda busca (erro pego rodando o script depois de
+  escrevê-lo, corrigido antes de virar prática recomendada).
 
 ## Busca de famílias pelo cuidador
 
@@ -422,11 +499,19 @@ mesmo padrão já usado pela home page, ver "Identidade do site"):
   inventar um valor pra preencher essa lacuna quebraria a mesma regra que
   já vale para `MatchScoreRing`/`ConnectionLine` ("nunca fabricar um número
   que pareça real sem ser"). Cada card mostra `MatchScoreRing` com o
-  `matchScore` real, cidade/estado (nunca `address` — a família não tem
-  esse campo exposto aqui, ver "Busca de famílias pelo cuidador" acima), e
-  o botão **`InteresseButton`**
-  (`app/dashboard/cuidador/_components/interesse-button.tsx`) no lugar do
-  `ContratarButton` do lado família — mesmo `POST /api/hires`, mas com
+  `matchScore` real, o nome como link pro perfil (ver "Nome da outra parte
+  é sempre link" abaixo), cidade/estado (nunca `address` — a família não
+  tem esse campo exposto aqui, ver "Busca de famílias pelo cuidador"
+  acima), "Busca cuidado para {tipos}" (não "Atende" — ver "Correção de
+  texto: Atende vs. Busca" abaixo), o `hourlyBudget` formatado como "Até R$
+  X/h" (ou "Orçamento não informado" se ausente) e, se a família tiver
+  `bio`, um bloco rotulado "O que a família procura" com o texto truncado
+  em 120 caracteres (`BIO_PREVIEW_LENGTH`, local ao componente — texto
+  completo só na página de perfil). `FamilyForDisplay` (`lib/matching.ts`)
+  ganhou `bio` e `hourlyBudget` especificamente pra alimentar esse card. O
+  botão **`InteresseButton`**
+  (`app/dashboard/cuidador/_components/interesse-button.tsx`) fica no lugar
+  do `ContratarButton` do lado família — mesmo `POST /api/hires`, mas com
   `{ familyId }` no corpo (não `{ caregiverId }`) e o texto "Tenho
   interesse" em vez de "Contratar", já que aqui é o cuidador se oferecendo,
   não sendo contratado. Trata 409 com a mesma mensagem clara de solicitação
@@ -437,11 +522,13 @@ mesmo padrão já usado pela home page, ver "Identidade do site"):
   `findMatchedFamiliesForCaregiver`. Diferença estrutural importante: como
   `caregiverCapacity` é 3, a tela lista **0 a 3 cards** de família (um
   `.map`), não um card único condicional como do lado família (capacidade
-  1). Cada card usa o mesmo badge de texto **"Match estável"** (não
-  "Recomendado" — nome adaptado, mesmo princípio) e o mesmo
-  `ConnectionLine` com `STABLE_MATCH_VISUAL_SCORE = 0.9` fixo — **sem**
-  `MatchScoreRing`, mesma razão já documentada: Gale-Shapley não produz um
-  score 0-1 comparável. Também tem `InteresseButton` em cada card, para o
+  1). Cada card mostra o nome como link pro perfil, `ConnectionLine` com
+  `STABLE_MATCH_VISUAL_SCORE = 0.9` fixo (**sem** `MatchScoreRing`, mesma
+  razão já documentada: Gale-Shapley não produz um score 0-1 comparável) e
+  uma linha "X km de distância · Busca cuidado para {tipos em comum}" no
+  lugar do badge de texto original (ver "Match perfeito / recomendado:
+  badge textual → linha com dado real" e "Correção de texto: Atende vs.
+  Busca" abaixo). Também tem `InteresseButton` em cada card, para o
   cuidador poder agir direto a partir do match sugerido (mesmo padrão do
   `ContratarButton` em `/match-recomendado`).
 - **Links no dashboard** (`app/dashboard/cuidador/page.tsx`): "Buscar
@@ -484,12 +571,16 @@ O badge genérico "Recomendado"/"Match estável" (texto fixo, sem dado real
 por trás) foi substituído, nas duas telas de match
 (`/dashboard/familia/match-recomendado`, `/dashboard/cuidador/match-perfeito`),
 por uma linha explicativa com fatos reais sobre o par família-cuidador —
-ex. "15.4 km de distância · Atende Idosos". Mesma regra de "nunca fabricar
-um número que pareça real" que já vale para `MatchScoreRing`/
-`ConnectionLine` (ver "Sistema de design"): como Gale-Shapley não produz um
-`matchScore` 0-1, a linha nunca mostra uma porcentagem de compatibilidade —
-só os dois fatores reais que já existiam nos profiles envolvidos (distância
-via Haversine, tipos de cuidado em comum).
+ex. "15.4 km de distância · Atende Idosos" do lado família (mostrando um
+cuidador) ou "15.4 km de distância · Busca cuidado para Idosos" do lado
+cuidador (mostrando uma família) — ver "Correção de texto: Atende vs.
+Busca" abaixo para o porquê da frase mudar conforme quem está sendo
+mostrado. Mesma regra de "nunca fabricar um número que pareça real" que já
+vale para `MatchScoreRing`/`ConnectionLine` (ver "Sistema de design"): como
+Gale-Shapley não produz um `matchScore` 0-1, a linha nunca mostra uma
+porcentagem de compatibilidade — só os dois fatores reais que já existiam
+nos profiles envolvidos (distância via Haversine, tipos de cuidado em
+comum).
 
 `findMatchedCaregiverForFamily` e `findMatchedFamiliesForCaregiver`
 (`lib/matching.ts`) ganharam `distanceKm`/`sharedCareTypes` no retorno:
@@ -526,14 +617,82 @@ match, as duas páginas de perfil somente-leitura, `contratacoes`,
 para importar dali; os 6 arquivos anteriores continuam com sua cópia local
 intacta, fora do escopo do que motivou esse novo arquivo.
 
+## Correção de texto: Atende vs. Busca
+
+Qualquer trecho de UI que lista tipos de cuidado precisa deixar claro *de
+qual lado do par* está falando — "Atende Idosos" descreve um cuidador
+(o que ele oferece), "Busca cuidado para Idosos" descreve uma família
+(o que ela precisa). Usar o texto errado do lado errado (ex. "Atende" numa
+tela que mostra uma família) inverte o sentido da frase. Regra aplicada
+em toda a base:
+
+- **Telas que mostram um cuidador** (família olhando cuidadores) — mantêm
+  **"Atende {tipos}"**: `/dashboard/familia/buscar` (`caregiver-results.tsx`,
+  lista sem prefixo verbal, só os tipos) e
+  `/dashboard/familia/match-recomendado` (`Atende {tipos}` explícito na
+  linha de distância/compatibilidade).
+- **Telas que mostram uma família** (cuidador olhando famílias) — usam
+  **"Busca cuidado para {tipos}"**: `/dashboard/cuidador/buscar`
+  (`family-results.tsx`) e `/dashboard/cuidador/match-perfeito`, os dois
+  corrigidos nesta tarefa — antes `match-perfeito` reaproveitava
+  "Atende {tipos}" (herdado por ter sido escrito espelhando a versão
+  família do outro lado sem revisar a semântica), o que descrevia
+  incorretamente uma família como se ela "atendesse" um tipo de cuidado.
+- Listas que só exibem os tipos sem nenhum prefixo verbal (`contratacoes`,
+  `solicitacoes`, `trabalhos-ativos`, a barra-resumo de `/buscar`) não
+  precisaram de correção — a ambiguidade só existe quando um verbo é
+  adicionado à frase.
+
+## Nome da outra parte é sempre link para o perfil
+
+**Convenção geral, válida para qualquer tela nova do dashboard**: sempre
+que uma tela renderiza o nome de uma família ou cuidador que não é a
+própria sessão logada (`family.user.name`, `caregiver.user.name`,
+`hire.family.name`, `review.author.name`, ou equivalente), esse nome deve
+ser um `<Link>` para `/dashboard/profile/family/[id]` ou
+`/dashboard/profile/caregiver/[id]` (`[id]` = `User.id` da pessoa — ver
+"Página de perfil somente-leitura" abaixo), estilizado com `hover:underline`
+sobre a cor de texto já usada no lugar (nunca um botão ou card inteiro
+clicável quando já existe outro link/botão de ação por perto — ver "Tela
+de detalhe de um Hire" sobre não aninhar elementos clicáveis).
+
+Auditoria completa feita ao introduzir essa convenção (toda ocorrência de
+`.name`/`user.name` renderizada em `app/`, uma por uma):
+
+| Local | Antes | Depois |
+|---|---|---|
+| `/dashboard/hires/[id]` (nome da outra parte, topo) | já era link | já era link |
+| `/dashboard/hires/[id]` (`review.author.name`) | texto simples | **link** |
+| `/dashboard/familia/contratacoes` | já era link | já era link |
+| `/dashboard/cuidador/solicitacoes` | já era link | já era link |
+| `/dashboard/familia/trabalhos-ativos` | card inteiro linkava pro `Hire`, nome não linkava pro perfil | **reestruturado**: nome vira link pro perfil, "Ver detalhes" separado linka pro `Hire` (mesmo padrão de `contratacoes`) |
+| `/dashboard/cuidador/trabalhos-ativos` | idem acima | idem acima |
+| `/dashboard/familia/match-recomendado` | texto simples | **link** |
+| `/dashboard/cuidador/match-perfeito` | texto simples | **link** |
+| `/dashboard/familia/buscar` (`caregiver-results.tsx`) | texto simples | **link** |
+| `/dashboard/cuidador/buscar` (`family-results.tsx`) | texto simples | **link** |
+| `/dashboard/cuidador/avaliacoes` (`review.author.name`) | texto simples | **link** |
+| `/dashboard/profile/family/[id]`, `/dashboard/profile/caregiver/[id]` | nome é o dono da própria página (self) | não aplicável — não há pra onde linkar |
+| `/dashboard/familia`, `/dashboard/cuidador` (saudação "Bem-vindo(a)") | `session.user.name`, é a própria pessoa logada (self) | não aplicável |
+| `GET /api/matching/stable-match*` | resposta JSON de API, não é UI renderizada | não aplicável |
+
+Dois casos usam `review.authorId` em vez de `hire.familyId`/`hire.caregiverId`
+diretamente: `/dashboard/hires/[id]` e `/dashboard/cuidador/avaliacoes`
+linkam a `Review` pra `/dashboard/profile/family/${review.authorId}` — hoje
+`authorId` é sempre uma família (só famílias avaliam, ver "Sistema de
+Review"), então o link sempre resolve pra um perfil de família real, mas o
+código usa o id do autor da review, não assume `hire.familyId`, pro caso
+de essa regra de negócio mudar no futuro.
+
 ## Página de perfil somente-leitura
 
 `app/dashboard/profile/family/[id]/page.tsx` e
 `app/dashboard/profile/caregiver/[id]/page.tsx` (novas): "quem é essa
 pessoa" — nome, cidade/estado, bio, tipos de cuidado (`neededCareTypes` ou
-`careTypes`, conforme o lado) e, só no lado cuidador, avaliação média
-(`calculateAverageRating`). `[id]` é sempre o `User.id` (o mesmo
-identificador já usado como `caregiverUserId`/`familyUserId` em
+`careTypes`, conforme o lado), o `hourlyBudget` da família (formatado como
+"Até R$ X/h" ou "Orçamento não informado") e, só no lado cuidador,
+avaliação média (`calculateAverageRating`). `[id]` é sempre o `User.id` (o
+mesmo identificador já usado como `caregiverUserId`/`familyUserId` em
 `ContratarButton`/`InteresseButton`/`Hire.caregiverId`/`Hire.familyId`),
 não o `id` interno de `FamilyProfile`/`CaregiverProfile` — consistente com
 o resto do app, onde "a pessoa" é sempre identificada pelo `User.id`.
@@ -559,11 +718,8 @@ o resto do app, onde "a pessoa" é sempre identificada pelo `User.id`.
   uma única origem "correta" pra voltar; `/dashboard` sempre resolve pro
   painel de quem está vendo, seja qual for o `role`.
 
-**Nome vira link**: em `/dashboard/hires/[id]`, `/dashboard/familia/contratacoes`
-e `/dashboard/cuidador/solicitacoes`, o nome da outra parte agora é um
-`<Link>` pra página de perfil correspondente (`hire.caregiverId`/
-`hire.familyId`, que já é exatamente o `User.id` esperado pelo `[id]` da
-rota).
+Ver "Nome da outra parte é sempre link para o perfil" acima para a
+convenção que aponta pra essas duas páginas em toda tela do dashboard.
 
 ## Trabalhos ativos
 
@@ -573,12 +729,15 @@ de `Hire`s só com `status === ACCEPTED` — um subconjunto do que já aparece
 em `/contratacoes`/`/solicitacoes`, isolado numa página própria porque "o
 que está em andamento agora" é uma pergunta diferente de "todo o histórico
 de solicitações" (que mistura `PENDING`/`REJECTED`/`COMPLETED`/`CANCELLED`
-junto). Cada card é inteiramente um `<Link>` pra `/dashboard/hires/[id]` —
-não reimplementa botões de ação, contato, nem review, tudo isso já vive na
-tela de detalhe. Como não há nenhum botão dentro do card aqui (diferente
-de `/contratacoes`, que tem `HireActionButton`s dentro do card), o card
-inteiro pode ser clicável sem o problema de elemento interativo aninhado
-documentado em "Tela de detalhe de um Hire". Ordenado por `acceptedAt desc`.
+junto). Cada card não reimplementa botões de ação, contato, nem review —
+tudo isso já vive na tela de detalhe. **Estrutura do card revisada** após a
+convenção "nome sempre link pro perfil" (ver acima): originalmente o card
+inteiro era um único `<Link>` pra `/dashboard/hires/[id]`, mas isso não
+deixava o nome linkável pro perfil sem aninhar um `<a>` dentro de outro
+(HTML inválido); hoje o card é uma `<div>` simples com o nome como `<Link>`
+pro perfil e um "Ver detalhes" separado (mesmo padrão visual de
+`/contratacoes`/`/solicitacoes`) linkando pro `Hire`. Ordenado por
+`acceptedAt desc`.
 
 Cada dashboard (`app/dashboard/familia/page.tsx`,
 `app/dashboard/cuidador/page.tsx`) ganhou um card "Trabalhos ativos"
@@ -1361,3 +1520,14 @@ contratações e avaliações) para usar ao vivo na apresentação do TCC. Roda 
   executa seu próprio `main()` quando rodado diretamente (`require.main ===
   module`), então importar `cleanup` dali não dispara um seed completo como
   efeito colateral.
+- **Nenhuma `FamilySeed` tem `hourlyBudget` preenchido ainda** (campo
+  adicionado depois de `seed-demo.ts` já existir) — as 3 famílias demo
+  continuam caindo na camada 2/3 de `computePriceScore` (fallback neutro
+  ou normalização relativa, nunca a comparação real de orçamento). O
+  caminho "com orçamento" foi validado sem tocar o dataset de demo/produção
+  — ver o cenário `seedBudgetScenario` em `scripts/test-matching.ts`, que
+  cria e limpa sua própria família fictícia com `hourlyBudget` real. Se o
+  caminho com orçamento precisar aparecer numa apresentação ao vivo, dá pra
+  editar temporariamente `FamilyProfile.hourlyBudget` de uma das contas
+  demo antes de rodar a busca (ou preencher pela própria tela de perfil,
+  logado como a conta demo).

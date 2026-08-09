@@ -37,6 +37,7 @@ export default async function FamilyProfilePage({
       city: true,
       state: true,
       bio: true,
+      hourlyBudget: true,
       neededCareTypes: true,
       user: { select: { name: true } },
     },
@@ -70,15 +71,27 @@ export default async function FamilyProfilePage({
             <p className="mt-6 text-sm text-ink/80">{familyProfile.bio}</p>
           )}
 
-          <div className="mt-6">
-            <h2 className="text-xs font-medium uppercase text-muted">
-              Tipos de cuidado procurados
-            </h2>
-            <p className="mt-1 text-sm text-ink/80">
-              {familyProfile.neededCareTypes.length > 0
-                ? formatCareTypes(familyProfile.neededCareTypes)
-                : "Não informado"}
-            </p>
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <div>
+              <h2 className="text-xs font-medium uppercase text-muted">
+                Tipos de cuidado procurados
+              </h2>
+              <p className="mt-1 text-sm text-ink/80">
+                {familyProfile.neededCareTypes.length > 0
+                  ? formatCareTypes(familyProfile.neededCareTypes)
+                  : "Não informado"}
+              </p>
+            </div>
+            <div>
+              <h2 className="text-xs font-medium uppercase text-muted">
+                Orçamento
+              </h2>
+              <p className="mt-1 font-mono text-sm text-ink/80">
+                {familyProfile.hourlyBudget !== null
+                  ? `Até R$ ${Number(familyProfile.hourlyBudget).toFixed(2)}/h`
+                  : "Orçamento não informado"}
+              </p>
+            </div>
           </div>
         </div>
       </div>

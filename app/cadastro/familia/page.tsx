@@ -21,6 +21,7 @@ import {
 import { firstApiErrorMessage } from "@/lib/api-error";
 import { isCompletePhone, PHONE_INVALID_MESSAGE } from "@/lib/phone";
 import {
+  blurOnWheel,
   cardClass,
   errorTextClass,
   inputClass,
@@ -45,6 +46,7 @@ const INITIAL_FORM = {
   state: "",
   address: "",
   bio: "",
+  hourlyBudget: "",
 };
 
 export default function CadastroFamiliaPage() {
@@ -116,6 +118,7 @@ export default function CadastroFamiliaPage() {
           state: form.state,
           address: form.address,
           bio: form.bio || undefined,
+          hourlyBudget: form.hourlyBudget ? Number(form.hourlyBudget) : undefined,
           neededCareTypes,
         }),
       });
@@ -273,6 +276,21 @@ export default function CadastroFamiliaPage() {
               ))}
             </div>
           </fieldset>
+          <div>
+            <label htmlFor="hourlyBudget" className={labelClass}>
+              Quanto você pode pagar por hora (R$)
+            </label>
+            <input
+              id="hourlyBudget"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.hourlyBudget}
+              onChange={(event) => update("hourlyBudget", event.target.value)}
+              onWheel={blurOnWheel}
+              className={inputClass}
+            />
+          </div>
           <div>
             <label htmlFor="bio" className={labelClass}>
               Sobre você

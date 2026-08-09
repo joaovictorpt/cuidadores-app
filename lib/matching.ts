@@ -23,6 +23,7 @@ export type FamilyForMatching = {
   latitude: number | null;
   longitude: number | null;
   neededCareTypes: CareType[];
+  hourlyBudget: number | null;
 };
 
 // Same as FamilyForMatching, but carrying an identity (the User id) so it
@@ -49,6 +50,7 @@ export type FamilyForDisplay = FamilyCandidate & {
   name: string | null;
   city: string | null;
   state: string | null;
+  bio: string | null;
 };
 
 export type RankedFamily<F extends FamilyCandidate = FamilyCandidate> = {
@@ -132,36 +134,69 @@ export function findCandidateFamilies<F extends FamilyForMatching>(
   );
 }
 
-function computePriceScore(
-  caregiver: CaregiverForMatching,
-  allCandidates: CaregiverForMatching[]
+// Three-layer fallback, in priority order:
+//  1. The family declared a real `hourlyBudget` -- compare the caregiver's
+//     actual rate against it. At or under budget scores a perfect 1.0;
+//     over budget decays linearly and floors at 0 once the rate is double
+//     the budget (rate - budget >= budget). This is the only layer that
+//     reflects what the family actually said they can afford.
+//  2. No budget declared, but the caller supplied a pool of other
+//     candidates' rates -- fall back to the previous behavior (relative
+//     min/max normalization within that pool), so a caregiver's price
+//     score still says *something* ("cheap relative to the alternatives")
+//     even without a stated budget.
+//  3. Neither -- nothing to compare against, so the price component can't
+//     discriminate at all. Reuses matchingConfig.defaultRatingWhenNoReviews
+//     rather than a separate magic constant, since it means the same thing
+//     structurally: "no data, so don't penalize or reward, stay neutral."
+export function computePriceScore(
+  caregiverRate: number | null,
+  familyBudget: number | null,
+  candidateRatesForFallback?: number[]
 ): number {
-  if (caregiver.hourlyRate === null) {
-    return 0.5;
+  if (caregiverRate === null) {
+    return matchingConfig.defaultRatingWhenNoReviews;
   }
 
-  const rates = allCandidates
-    .map((candidate) => candidate.hourlyRate)
-    .filter((rate): rate is number => rate !== null);
+  if (familyBudget !== null) {
+    if (caregiverRate <= familyBudget) {
+      return 1;
+    }
 
-  if (rates.length <= 1) {
-    return 0.5;
+    return Math.max(0, 1 - (caregiverRate - familyBudget) / familyBudget);
   }
 
-  const min = Math.min(...rates);
-  const max = Math.max(...rates);
+  if (candidateRatesForFallback !== undefined) {
+    const rates = candidateRatesForFallback;
 
-  if (max === min) {
-    return 0.5;
+    if (rates.length <= 1) {
+      return matchingConfig.defaultRatingWhenNoReviews;
+    }
+
+    const min = Math.min(...rates);
+    const max = Math.max(...rates);
+
+    if (max === min) {
+      return matchingConfig.defaultRatingWhenNoReviews;
+    }
+
+    return 1 - (caregiverRate - min) / (max - min);
   }
 
-  return 1 - (caregiver.hourlyRate - min) / (max - min);
+  return matchingConfig.defaultRatingWhenNoReviews;
 }
 
+// `allCandidates` is optional and, when provided, only ever feeds
+// computePriceScore's layer-2 fallback (relative rate normalization) --
+// see that function's comment for when each layer applies. Whether to pass
+// it is a per-caller decision: rankCaregiversAgainstList (family searching
+// caregivers) does, rankFamiliesAgainstList (caregiver searching families)
+// deliberately doesn't, so the two sides of the graph can have different
+// fallback behavior when no budget is declared.
 export function computeMatchScore(
   familyProfile: FamilyForMatching,
   caregiver: CaregiverForMatching,
-  allCandidates: CaregiverForMatching[]
+  allCandidates?: CaregiverForMatching[]
 ): number {
   const distanceKm = haversineDistanceKm(
     familyProfile.latitude!,
@@ -187,7 +222,15 @@ export function computeMatchScore(
       ? caregiver.averageRating / 5
       : matchingConfig.defaultRatingWhenNoReviews;
 
-  const priceScore = computePriceScore(caregiver, allCandidates);
+  const candidateRates = allCandidates
+    ?.map((candidate) => candidate.hourlyRate)
+    .filter((rate): rate is number => rate !== null);
+
+  const priceScore = computePriceScore(
+    caregiver.hourlyRate,
+    familyProfile.hourlyBudget,
+    candidateRates
+  );
 
   const { weights } = matchingConfig;
 
@@ -235,8 +278,7 @@ function rankCaregiversAgainstList(
 // name/city/state too) and get that same shape back on `family`.
 function rankFamiliesAgainstList<F extends FamilyCandidate>(
   caregiver: CaregiverForMatching,
-  allFamilies: F[],
-  allCaregivers: CaregiverForMatching[]
+  allFamilies: F[]
 ): RankedFamily<F>[] {
   const eligibleFamilies = findCandidateFamilies(caregiver, allFamilies);
 
@@ -247,15 +289,12 @@ function rankFamiliesAgainstList<F extends FamilyCandidate>(
       caregiver.latitude!,
       caregiver.longitude!
     );
-    // Reuse that family's own eligible-caregiver pool for price
-    // normalization, so the price component means the same thing here
-    // as it would in that family's own search -- computeMatchScore's
-    // `allCandidates` argument only ever affects the price score.
-    const candidatesForThisFamily = findCandidateCaregivers(
-      family,
-      allCaregivers
-    );
-    const matchScore = computeMatchScore(family, caregiver, candidatesForThisFamily);
+    // No candidateRatesForFallback passed here on purpose -- unlike the
+    // family side (rankCaregiversAgainstList), this direction never falls
+    // back to relative rate normalization against other caregivers when a
+    // family hasn't declared a budget; it just goes neutral. See
+    // computePriceScore's comment for the full fallback order.
+    const matchScore = computeMatchScore(family, caregiver);
 
     return { family, distanceKm, matchScore };
   });
@@ -315,6 +354,9 @@ export async function rankCaregiversForFamily(
     latitude: familyProfile.latitude,
     longitude: familyProfile.longitude,
     neededCareTypes: familyProfile.neededCareTypes,
+    hourlyBudget: familyProfile.hourlyBudget
+      ? Number(familyProfile.hourlyBudget)
+      : null,
   };
 
   const allCaregivers = await fetchAllCaregiversForMatching();
@@ -332,9 +374,11 @@ async function fetchAllFamiliesForDisplay(): Promise<FamilyForDisplay[]> {
     name: profile.user.name,
     city: profile.city,
     state: profile.state,
+    bio: profile.bio,
     latitude: profile.latitude,
     longitude: profile.longitude,
     neededCareTypes: profile.neededCareTypes,
+    hourlyBudget: profile.hourlyBudget ? Number(profile.hourlyBudget) : null,
   }));
 }
 
@@ -370,12 +414,9 @@ export async function rankFamiliesForCaregiver(
     reviewCount,
   };
 
-  const [allFamilies, allCaregivers] = await Promise.all([
-    fetchAllFamiliesForDisplay(),
-    fetchAllCaregiversForMatching(),
-  ]);
+  const allFamilies = await fetchAllFamiliesForDisplay();
 
-  return rankFamiliesAgainstList(caregiver, allFamilies, allCaregivers);
+  return rankFamiliesAgainstList(caregiver, allFamilies);
 }
 
 // For each family, the caregivers eligible for them ranked by
@@ -403,10 +444,15 @@ export function buildFamilyPreferences(
 // For each caregiver, the families eligible for them ranked by the SAME
 // computeMatchScore formula, just with the roles of "which side varies"
 // swapped. Note: since the caregiver is fixed while looping over families,
-// the rating and price components of the score are constant across all of
-// that caregiver's candidate families (they don't depend on the family at
-// all) -- only distance and care-type compatibility actually vary and
-// drive the ranking. That's a direct, honest consequence of reusing the
+// the rating component of the score is constant across all of that
+// caregiver's candidate families (it's a property of the caregiver, not the
+// family). Price, since hourlyBudget was added, is no longer always
+// constant here: a family with a declared budget produces a real
+// budget-vs-rate comparison that varies per family, while a family without
+// one falls back to the neutral score (see computePriceScore) -- so price
+// only stays constant across candidates when none of them declared a
+// budget. Distance and care-type compatibility always vary and drive the
+// ranking regardless. That's a direct, honest consequence of reusing the
 // same edge-weight formula from both directions rather than inventing a
 // separate caregiver-side formula, exactly as specified.
 export function buildCaregiverPreferences(
@@ -416,7 +462,7 @@ export function buildCaregiverPreferences(
   const preferences = new Map<string, string[]>();
 
   for (const caregiver of caregivers) {
-    const ranked = rankFamiliesAgainstList(caregiver, families, caregivers);
+    const ranked = rankFamiliesAgainstList(caregiver, families);
 
     preferences.set(
       caregiver.userId,
@@ -443,6 +489,7 @@ export async function runStableMatchingForAllFamilies(): Promise<
     latitude: profile.latitude,
     longitude: profile.longitude,
     neededCareTypes: profile.neededCareTypes,
+    hourlyBudget: profile.hourlyBudget ? Number(profile.hourlyBudget) : null,
   }));
 
   const proposerPreferences = buildFamilyPreferences(families, caregivers);

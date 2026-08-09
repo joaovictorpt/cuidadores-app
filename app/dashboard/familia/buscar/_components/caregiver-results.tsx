@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { AvatarPlaceholder } from "@/app/dashboard/familia/_components/avatar-placeholder";
@@ -82,7 +83,12 @@ export function CaregiverResults({ results }: { results: RankedCaregiver[] }) {
                 <AvatarPlaceholder name={caregiver.name} />
                 <div>
                   <h2 className="font-display text-xl font-semibold text-ink">
-                    {caregiver.name ?? "Cuidador"}
+                    <Link
+                      href={`/dashboard/profile/caregiver/${caregiver.userId}`}
+                      className="hover:underline"
+                    >
+                      {caregiver.name ?? "Cuidador"}
+                    </Link>
                   </h2>
                   {caregiver.bio && (
                     <p className="mt-1 text-sm text-muted">{caregiver.bio}</p>

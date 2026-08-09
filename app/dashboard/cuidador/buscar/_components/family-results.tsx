@@ -1,17 +1,35 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { AvatarPlaceholder } from "@/app/dashboard/familia/_components/avatar-placeholder";
 import { MatchScoreRing } from "@/app/dashboard/familia/_components/match-score-ring";
 import { InteresseButton } from "@/app/dashboard/cuidador/_components/interesse-button";
+import { formatCareTypes } from "@/lib/care-types";
 import type { FamilyForDisplay, RankedFamily } from "@/lib/matching";
 
-const CARE_TYPE_LABELS: Record<string, string> = {
-  ELDERLY: "Idosos",
-  CHILD: "Crianças",
-  SPECIAL_NEEDS: "Necessidades especiais",
-};
+// Same length used for any other card-level bio truncation in the app
+// (there's no prior precedent to match -- this is the first card that
+// shows a bio -- so this is a fresh choice, not a reused constant): long
+// enough to give a real sense of what the family is looking for, short
+// enough that the card doesn't grow taller than its neighbors. Full text
+// is always one click away on the family's profile page.
+const BIO_PREVIEW_LENGTH = 120;
+
+function truncateBio(bio: string): string {
+  if (bio.length <= BIO_PREVIEW_LENGTH) {
+    return bio;
+  }
+
+  return `${bio.slice(0, BIO_PREVIEW_LENGTH).trimEnd()}…`;
+}
+
+function formatHourlyBudget(hourlyBudget: number | null): string {
+  return hourlyBudget !== null
+    ? `Até R$ ${hourlyBudget.toFixed(2)}/h`
+    : "Orçamento não informado";
+}
 
 // Only two sort options, not three like CaregiverResults -- FamilyForDisplay
 // carries no rating (families aren't reviewed), so a "Melhor avaliação"
@@ -82,26 +100,45 @@ export function FamilyResults({
                 <AvatarPlaceholder name={family.name} />
                 <div>
                   <h2 className="font-display text-xl font-semibold text-ink">
-                    {family.name ?? "Família"}
+                    <Link
+                      href={`/dashboard/profile/family/${family.userId}`}
+                      className="hover:underline"
+                    >
+                      {family.name ?? "Família"}
+                    </Link>
                   </h2>
                   <p className="mt-1 text-sm text-muted">
                     {[family.city, family.state].filter(Boolean).join(", ")}
                   </p>
                   <p className="mt-2 text-xs text-muted">
-                    {family.neededCareTypes
-                      .map((type) => CARE_TYPE_LABELS[type] ?? type)
-                      .join(", ")}
+                    Busca cuidado para {formatCareTypes(family.neededCareTypes)}
                   </p>
+                  {family.bio && (
+                    <div className="mt-2">
+                      <p className="text-xs font-medium uppercase text-muted">
+                        O que a família procura
+                      </p>
+                      <p className="mt-1 text-sm text-ink/80">
+                        {truncateBio(family.bio)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
               <MatchScoreRing matchScore={matchScore} />
             </div>
 
-            <dl className="mt-5">
+            <dl className="mt-5 grid grid-cols-2 gap-4">
               <div>
                 <dt className="text-xs text-muted">Distância</dt>
                 <dd className="font-mono text-sm text-ink/80">
                   {distanceKm.toFixed(1)} km
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Orçamento</dt>
+                <dd className="font-mono text-sm text-ink/80">
+                  {formatHourlyBudget(family.hourlyBudget)}
                 </dd>
               </div>
             </dl>

@@ -14,6 +14,7 @@ const updateSchema = z.object({
   state: z.string().optional(),
   address: z.string().optional(),
   bio: z.string().optional(),
+  hourlyBudget: z.number().positive().optional(),
   neededCareTypes: z.array(z.nativeEnum(CareType)).optional(),
 });
 

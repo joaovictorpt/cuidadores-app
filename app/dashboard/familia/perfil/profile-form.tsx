@@ -6,6 +6,7 @@ import { LocationFields } from "@/app/components/location-fields";
 import { PhoneInput } from "@/app/components/phone-input";
 import { isCompletePhone, PHONE_INVALID_MESSAGE } from "@/lib/phone";
 import {
+  blurOnWheel,
   cardClass,
   errorTextClass,
   inputClass,
@@ -26,6 +27,7 @@ type InitialProfile = {
   state: string;
   address: string;
   bio: string;
+  hourlyBudget: string;
   neededCareTypes: string[];
 };
 
@@ -36,6 +38,7 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
     state: initialProfile.state,
     address: initialProfile.address,
     bio: initialProfile.bio,
+    hourlyBudget: initialProfile.hourlyBudget,
   });
   const [neededCareTypes, setNeededCareTypes] = useState<string[]>(
     initialProfile.neededCareTypes
@@ -81,6 +84,7 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
           state: form.state || undefined,
           address: form.address || undefined,
           bio: form.bio || undefined,
+          hourlyBudget: form.hourlyBudget ? Number(form.hourlyBudget) : undefined,
           neededCareTypes,
         }),
       });
@@ -161,6 +165,21 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
             ))}
           </div>
         </fieldset>
+        <div>
+          <label htmlFor="hourlyBudget" className={labelClass}>
+            Quanto você pode pagar por hora (R$)
+          </label>
+          <input
+            id="hourlyBudget"
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.hourlyBudget}
+            onChange={(event) => update("hourlyBudget", event.target.value)}
+            onWheel={blurOnWheel}
+            className={inputClass}
+          />
+        </div>
         <div>
           <label htmlFor="bio" className={labelClass}>
             Sobre você

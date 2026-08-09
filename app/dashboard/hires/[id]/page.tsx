@@ -186,9 +186,13 @@ export default async function HireDetailPage({
                 Avaliação
               </h2>
               <div className="mt-2 flex items-center justify-between gap-4">
-                <p className="text-sm text-ink/80">
+                {/* review.authorId is always a family's User.id -- see CLAUDE.md "Sistema de Review" */}
+                <Link
+                  href={`/dashboard/profile/family/${hire.review.authorId}`}
+                  className="text-sm text-ink/80 hover:underline"
+                >
                   {hire.review.author.name ?? "Família"}
-                </p>
+                </Link>
                 <StarRating value={hire.review.rating} readOnly />
               </div>
               {hire.review.comment && (

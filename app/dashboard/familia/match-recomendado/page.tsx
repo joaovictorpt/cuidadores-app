@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth/next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BackLink } from "@/app/dashboard/_components/back-link";
@@ -68,7 +69,12 @@ export default async function MatchRecomendadoPage() {
               <AvatarPlaceholder name={caregiverProfile.user.name} />
               <div>
                 <h2 className="font-display text-xl font-semibold text-ink">
-                  {caregiverProfile.user.name ?? "Cuidador"}
+                  <Link
+                    href={`/dashboard/profile/caregiver/${matchedCaregiver.caregiverUserId}`}
+                    className="hover:underline"
+                  >
+                    {caregiverProfile.user.name ?? "Cuidador"}
+                  </Link>
                 </h2>
                 {caregiverProfile.bio && (
                   <p className="mt-1 text-sm text-muted">{caregiverProfile.bio}</p>

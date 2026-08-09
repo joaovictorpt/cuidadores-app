@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth/next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BackLink } from "@/app/dashboard/_components/back-link";
@@ -54,12 +55,18 @@ export default async function MatchPerfeitoPage() {
                 <AvatarPlaceholder name={family.name} />
                 <div>
                   <h2 className="font-display text-xl font-semibold text-ink">
-                    {family.name ?? "Família"}
+                    <Link
+                      href={`/dashboard/profile/family/${family.familyId}`}
+                      className="hover:underline"
+                    >
+                      {family.name ?? "Família"}
+                    </Link>
                   </h2>
                   <p className="mt-1 text-sm text-muted">
                     {[family.city, family.state].filter(Boolean).join(", ")}
                   </p>
                   <p className="mt-2 text-xs text-muted">
+                    Busca cuidado para{" "}
                     {family.neededCareTypes
                       .map((type) => CARE_TYPE_LABELS[type] ?? type)
                       .join(", ")}
@@ -69,7 +76,7 @@ export default async function MatchPerfeitoPage() {
                       ? `${family.distanceKm.toFixed(1)} km de distância`
                       : "Distância não disponível"}
                     {family.sharedCareTypes.length > 0 &&
-                      ` · Atende ${formatCareTypes(family.sharedCareTypes)}`}
+                      ` · Busca cuidado para ${formatCareTypes(family.sharedCareTypes)}`}
                   </p>
                 </div>
               </div>

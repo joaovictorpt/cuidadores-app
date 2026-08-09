@@ -48,6 +48,7 @@ const familySchema = z.object({
   role: z.literal(Role.FAMILY),
   address: z.string().min(1, "Endereço é obrigatório"),
   bio: z.string().optional(),
+  hourlyBudget: z.number().positive().optional(),
   neededCareTypes: z.array(z.nativeEnum(CareType)).optional(),
 });
 
@@ -111,6 +112,7 @@ export async function POST(request: Request) {
             state: data.state,
             address: data.address,
             bio: data.bio,
+            hourlyBudget: data.hourlyBudget,
             neededCareTypes: data.neededCareTypes ?? [],
             latitude: geocoded?.latitude,
             longitude: geocoded?.longitude,

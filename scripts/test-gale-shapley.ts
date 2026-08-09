@@ -280,6 +280,7 @@ async function main() {
     latitude: p.latitude,
     longitude: p.longitude,
     neededCareTypes: p.neededCareTypes,
+    hourlyBudget: p.hourlyBudget ? Number(p.hourlyBudget) : null,
   }));
   const caregivers = caregiverProfiles.map((p) => {
     const ratings = p.user.reviewsReceived.map((r) => r.rating);

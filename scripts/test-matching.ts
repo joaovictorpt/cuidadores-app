@@ -1,6 +1,6 @@
 import { CareType, HireStatus, Role } from "@prisma/client";
 
-import { rankCaregiversForFamily } from "@/lib/matching";
+import { computePriceScore, rankCaregiversForFamily } from "@/lib/matching";
 import { matchingConfig } from "@/lib/matching-config";
 import { prisma } from "@/lib/prisma";
 
@@ -58,6 +58,104 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
     ratings: [5],
   },
 ];
+
+// Pure, no DB involved -- exercises all three computePriceScore fallback
+// layers directly (see lib/matching.ts for the layer order/reasoning),
+// independent of the weighted composite matchScore.
+function testComputePriceScore() {
+  console.log("=== computePriceScore (função pura, sem banco) ===\n");
+
+  const checks: { label: string; actual: number; expected: number }[] = [
+    { label: "Camada 1 (budget) -- rate igual ao budget", actual: computePriceScore(30, 30), expected: 1 },
+    { label: "Camada 1 (budget) -- rate abaixo do budget", actual: computePriceScore(20, 30), expected: 1 },
+    { label: "Camada 1 (budget) -- rate 50% acima do budget", actual: computePriceScore(45, 30), expected: 0.5 },
+    { label: "Camada 1 (budget) -- rate 2x o budget (piso em 0)", actual: computePriceScore(60, 30), expected: 0 },
+    { label: "Camada 1 (budget) -- rate muito acima, nunca negativo", actual: computePriceScore(120, 30), expected: 0 },
+    { label: "Camada 2 (fallback) -- sem budget, rate = mínimo do pool", actual: computePriceScore(10, null, [10, 20, 30]), expected: 1 },
+    { label: "Camada 2 (fallback) -- sem budget, rate = máximo do pool", actual: computePriceScore(30, null, [10, 20, 30]), expected: 0 },
+    { label: "Camada 2 (fallback) -- sem budget, rate no meio do pool", actual: computePriceScore(20, null, [10, 20, 30]), expected: 0.5 },
+    { label: "Camada 3 (neutro) -- sem budget, sem pool", actual: computePriceScore(20, null), expected: matchingConfig.defaultRatingWhenNoReviews },
+    { label: "caregiverRate null -- neutro independente do resto", actual: computePriceScore(null, 30, [10, 20]), expected: matchingConfig.defaultRatingWhenNoReviews },
+  ];
+
+  let allPassed = true;
+  for (const check of checks) {
+    const pass = Math.abs(check.actual - check.expected) < 1e-9;
+    allPassed &&= pass;
+    console.log(
+      `- ${check.label}: esperado=${check.expected}, obtido=${check.actual.toFixed(4)} -> ${pass ? "OK" : "ERRO"}`
+    );
+  }
+  console.log(`\n${allPassed ? "Todas as checagens passaram." : "PELO MENOS UMA CHECAGEM FALHOU."}\n`);
+}
+
+// End-to-end scenario for the budget path (Camada 1), run through the real
+// rankCaregiversForFamily pipeline rather than computePriceScore in
+// isolation -- proves FamilyProfile.hourlyBudget actually flows from
+// Prisma through FamilyForMatching/computeMatchScore. Both caregivers sit
+// at the identical coordinates/careTypes/ratings as the family, so
+// distance/careType/rating score identically -- only their hourlyRate
+// (and therefore price score) differs, isolating the budget comparison's
+// effect on the final weighted matchScore.
+async function seedBudgetScenario() {
+  const familyUser = await prisma.user.create({
+    data: {
+      email: `${EMAIL_PREFIX}familia-orcamento@example.com`,
+      role: Role.FAMILY,
+      familyProfile: {
+        create: {
+          city: "São Paulo",
+          state: "SP",
+          latitude: FAMILY_LAT,
+          longitude: FAMILY_LON,
+          neededCareTypes: [CareType.ELDERLY],
+          hourlyBudget: 30,
+        },
+      },
+    },
+    include: { familyProfile: true },
+  });
+
+  if (!familyUser.familyProfile) {
+    throw new Error("Family profile was not created");
+  }
+
+  const withinBudget = await prisma.user.create({
+    data: {
+      email: `${EMAIL_PREFIX}cuidador-dentro-orcamento@example.com`,
+      role: Role.CAREGIVER,
+      caregiverProfile: {
+        create: {
+          latitude: FAMILY_LAT,
+          longitude: FAMILY_LON,
+          careTypes: [CareType.ELDERLY],
+          hourlyRate: 25,
+        },
+      },
+    },
+  });
+
+  const overBudget = await prisma.user.create({
+    data: {
+      email: `${EMAIL_PREFIX}cuidador-fora-orcamento@example.com`,
+      role: Role.CAREGIVER,
+      caregiverProfile: {
+        create: {
+          latitude: FAMILY_LAT,
+          longitude: FAMILY_LON,
+          careTypes: [CareType.ELDERLY],
+          hourlyRate: 90,
+        },
+      },
+    },
+  });
+
+  return {
+    familyProfile: familyUser.familyProfile,
+    withinBudgetId: withinBudget.id,
+    overBudgetId: overBudget.id,
+  };
+}
 
 async function seed() {
   const familyUser = await prisma.user.create({
@@ -142,6 +240,47 @@ async function cleanup() {
 }
 
 async function main() {
+  testComputePriceScore();
+
+  console.log("=== Seed: criando família com orçamento + 2 cuidadores ===\n");
+  const budgetScenario = await seedBudgetScenario();
+  const budgetRanked = await rankCaregiversForFamily(budgetScenario.familyProfile);
+
+  console.log(
+    `Família com hourlyBudget=R$${budgetScenario.familyProfile.hourlyBudget} -- ` +
+      `${budgetRanked.length} cuidadores elegíveis (mesma distância/careType/rating, só o hourlyRate difere):`
+  );
+  budgetRanked.forEach((entry) => {
+    console.log(
+      `  ${entry.caregiver.userId === budgetScenario.withinBudgetId ? "[dentro do orçamento]" : "[fora do orçamento]"} ` +
+        `hourlyRate=R$${entry.caregiver.hourlyRate}  score=${entry.matchScore.toFixed(4)}`
+    );
+  });
+
+  const withinEntry = budgetRanked.find(
+    (entry) => entry.caregiver.userId === budgetScenario.withinBudgetId
+  );
+  const overEntry = budgetRanked.find(
+    (entry) => entry.caregiver.userId === budgetScenario.overBudgetId
+  );
+  const budgetPathWorks =
+    withinEntry !== undefined &&
+    overEntry !== undefined &&
+    withinEntry.matchScore > overEntry.matchScore;
+  console.log(
+    "- Cuidador dentro do orçamento pontuou mais que o cuidador muito acima dele? " +
+      (budgetPathWorks ? "SIM -- correto" : "NÃO -- ERRO") +
+      "\n"
+  );
+
+  // Cleaned up here, before the second scenario's seed() call below --
+  // both scenarios reuse the same FAMILY_LAT/FAMILY_LON (and an
+  // overlapping ELDERLY careType), so if this scenario's caregivers were
+  // left in place they'd leak into the second scenario's candidate pool
+  // as spurious extra matches (caught by an earlier run of this script:
+  // "5 de 4 cuidadores criados").
+  await cleanup();
+
   console.log("=== Seed: criando família + cuidadores fictícios ===\n");
   const { familyProfile, caregiverUserIdByLabel } = await seed();
   console.log(

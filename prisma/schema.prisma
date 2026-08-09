@@ -85,6 +85,7 @@ model FamilyProfile {
   state            String?
   address          String?
   bio              String?
+  hourlyBudget     Decimal?   @db.Decimal(10, 2)
   latitude         Float?
   longitude        Float?
   neededCareTypes  CareType[]

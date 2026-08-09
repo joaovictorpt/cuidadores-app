@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth/next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { StarRating } from "@/app/components/star-rating";
@@ -16,6 +17,9 @@ export default async function AvaliacoesPage() {
     redirect("/login");
   }
 
+  // review.authorId links to /dashboard/profile/family/[id] below -- only
+  // families write reviews today (see CLAUDE.md "Sistema de Review"), so
+  // authorId is always a family's User.id.
   const reviews = await prisma.review.findMany({
     where: { targetId: session.user.id },
     include: { author: { select: { name: true } } },
@@ -48,7 +52,12 @@ export default async function AvaliacoesPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <h2 className="font-display text-lg font-semibold text-ink">
-                  {review.author.name ?? "Família"}
+                  <Link
+                    href={`/dashboard/profile/family/${review.authorId}`}
+                    className="hover:underline"
+                  >
+                    {review.author.name ?? "Família"}
+                  </Link>
                 </h2>
                 <StarRating value={review.rating} readOnly />
               </div>

@@ -29,6 +29,7 @@ export default async function EditarPerfilFamiliaPage() {
             state: profile?.state ?? "",
             address: profile?.address ?? "",
             bio: profile?.bio ?? "",
+            hourlyBudget: profile?.hourlyBudget ? profile.hourlyBudget.toString() : "",
             neededCareTypes: profile?.neededCareTypes ?? [],
           }}
         />
