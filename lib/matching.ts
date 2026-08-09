@@ -1,4 +1,9 @@
-import { CareType, CaregiverProfile, FamilyProfile } from "@prisma/client";
+import {
+  CareType,
+  CaregiverAvailability,
+  CaregiverProfile,
+  FamilyProfile,
+} from "@prisma/client";
 
 import { getSharedCareTypes } from "@/lib/care-types";
 import { stableMatching } from "@/lib/gale-shapley";
@@ -18,6 +23,15 @@ export type CaregiverForMatching = {
   longitude: number | null;
   averageRating: number | null;
   reviewCount: number;
+  // Whether this caregiver should show up when a family searches/matches --
+  // enforced in findCandidateCaregivers, never in isEligiblePair (see that
+  // function's comment for why: isEligiblePair's `caregiver` argument plays
+  // different roles -- fixed searcher vs. candidate -- depending on which
+  // direction of the graph is calling it).
+  visibleToFamilies: boolean;
+  // Purely informational -- carried through search/matching results for
+  // display, never read by isEligiblePair/computeMatchScore.
+  availabilityStatus: CaregiverAvailability;
 };
 
 export type FamilyForMatching = {
@@ -25,6 +39,9 @@ export type FamilyForMatching = {
   longitude: number | null;
   neededCareTypes: CareType[];
   hourlyBudget: number | null;
+  // Mirrors CaregiverForMatching.visibleToFamilies on the other side of the
+  // graph -- enforced in findCandidateFamilies.
+  visibleToCaregivers: boolean;
 };
 
 // Same as FamilyForMatching, but carrying an identity (the User id) so it
@@ -83,6 +100,17 @@ function distanceKmOrNull(
 // of the bipartite graph must agree on which edges exist at all, otherwise
 // the two sides' preference lists wouldn't even be talking about the same
 // set of possible pairs.
+//
+// Deliberately doesn't check visibleToFamilies/visibleToCaregivers here,
+// even though both arguments carry those flags: this function is called
+// with the searching side's OWN profile as one argument and a list
+// candidate as the other (see findCandidateCaregivers/findCandidateFamilies
+// below), and which argument is "the searcher" vs. "the candidate" flips
+// depending on direction. Checking a flag here would incorrectly filter
+// based on the searcher's own visibility setting in one of the two
+// directions. The visibility checks live in the two wrapper functions
+// instead, where only the candidate list (never the fixed searcher) is
+// filtered.
 function isEligiblePair(
   familyProfile: FamilyForMatching,
   caregiver: CaregiverForMatching
@@ -116,8 +144,9 @@ export function findCandidateCaregivers(
   familyProfile: FamilyForMatching,
   allCaregivers: CaregiverForMatching[]
 ): CaregiverForMatching[] {
-  return allCaregivers.filter((caregiver) =>
-    isEligiblePair(familyProfile, caregiver)
+  return allCaregivers.filter(
+    (caregiver) =>
+      caregiver.visibleToFamilies && isEligiblePair(familyProfile, caregiver)
   );
 }
 
@@ -130,8 +159,9 @@ export function findCandidateFamilies<F extends FamilyForMatching>(
   caregiver: CaregiverForMatching,
   allFamilies: F[]
 ): F[] {
-  return allFamilies.filter((familyProfile) =>
-    isEligiblePair(familyProfile, caregiver)
+  return allFamilies.filter(
+    (familyProfile) =>
+      familyProfile.visibleToCaregivers && isEligiblePair(familyProfile, caregiver)
   );
 }
 
@@ -314,6 +344,8 @@ function toCaregiverForMatching(profile: {
   careTypes: CareType[];
   latitude: number | null;
   longitude: number | null;
+  visibleToFamilies: boolean;
+  availabilityStatus: CaregiverAvailability;
   user: { name: string | null; reviewsReceived: { rating: number }[] };
 }): CaregiverForMatching {
   const ratings = profile.user.reviewsReceived.map((review) => review.rating);
@@ -331,6 +363,8 @@ function toCaregiverForMatching(profile: {
     longitude: profile.longitude,
     averageRating,
     reviewCount,
+    visibleToFamilies: profile.visibleToFamilies,
+    availabilityStatus: profile.availabilityStatus,
   };
 }
 
@@ -359,6 +393,10 @@ export async function rankCaregiversForFamily(
     hourlyBudget: familyProfile.hourlyBudget
       ? Number(familyProfile.hourlyBudget)
       : null,
+    // Irrelevant to this direction (a family's own visibility never affects
+    // her own search for caregivers -- see findCandidateCaregivers), but
+    // still required by the type. Carried through faithfully anyway.
+    visibleToCaregivers: familyProfile.visibleToCaregivers,
   };
 
   const allCaregivers = await fetchAllCaregiversForMatching();
@@ -381,6 +419,7 @@ async function fetchAllFamiliesForDisplay(): Promise<FamilyForDisplay[]> {
     longitude: profile.longitude,
     neededCareTypes: profile.neededCareTypes,
     hourlyBudget: profile.hourlyBudget ? Number(profile.hourlyBudget) : null,
+    visibleToCaregivers: profile.visibleToCaregivers,
   }));
 }
 
@@ -414,6 +453,11 @@ export async function rankFamiliesForCaregiver(
     longitude: caregiverProfile.longitude,
     averageRating,
     reviewCount,
+    // Irrelevant to this direction (a caregiver's own visibility never
+    // affects his own search for families -- see findCandidateFamilies),
+    // but still required by the type. Carried through faithfully anyway.
+    visibleToFamilies: caregiverProfile.visibleToFamilies,
+    availabilityStatus: caregiverProfile.availabilityStatus,
   };
 
   const allFamilies = await fetchAllFamiliesForDisplay();
@@ -492,6 +536,7 @@ export async function runStableMatchingForAllFamilies(): Promise<
     longitude: profile.longitude,
     neededCareTypes: profile.neededCareTypes,
     hourlyBudget: profile.hourlyBudget ? Number(profile.hourlyBudget) : null,
+    visibleToCaregivers: profile.visibleToCaregivers,
   }));
 
   const proposerPreferences = buildFamilyPreferences(families, caregivers);

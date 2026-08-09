@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { notFound, redirect } from "next/navigation";
 
+import { AvailabilityBadge } from "@/app/components/availability-badge";
 import { BackLink } from "@/app/dashboard/_components/back-link";
 import { AvatarPlaceholder } from "@/app/dashboard/familia/_components/avatar-placeholder";
 import { authOptions } from "@/lib/auth";
@@ -36,6 +37,7 @@ export default async function CaregiverProfilePage({
       state: true,
       bio: true,
       careTypes: true,
+      availabilityStatus: true,
       user: {
         select: { name: true, reviewsReceived: { select: { rating: true } } },
       },
@@ -59,9 +61,12 @@ export default async function CaregiverProfilePage({
           <div className="flex items-start gap-4">
             <AvatarPlaceholder name={caregiverProfile.user.name} />
             <div>
-              <h1 className="font-display text-2xl font-semibold text-ink">
-                {caregiverProfile.user.name ?? "Cuidador"}
-              </h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="font-display text-2xl font-semibold text-ink">
+                  {caregiverProfile.user.name ?? "Cuidador"}
+                </h1>
+                <AvailabilityBadge status={caregiverProfile.availabilityStatus} />
+              </div>
               <p className="mt-1 text-sm text-muted">
                 {[caregiverProfile.city, caregiverProfile.state]
                   .filter(Boolean)

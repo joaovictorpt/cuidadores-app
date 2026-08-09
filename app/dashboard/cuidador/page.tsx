@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { LogoutButton } from "@/app/dashboard/_components/logout-button";
+import { AvailabilityControl } from "@/app/dashboard/cuidador/_components/availability-control";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { calculateAverageRating } from "@/lib/reviews";
@@ -47,6 +48,10 @@ export default async function DashboardCuidadorPage() {
           Bem-vindo(a), {session.user.name || session.user.email}
         </h1>
         <p className="mb-6 text-sm text-muted">Painel de controle do cuidador</p>
+
+        <AvailabilityControl
+          initialStatus={caregiverProfile?.availabilityStatus ?? "AVAILABLE"}
+        />
 
         <div className="mb-6 flex flex-col gap-3 sm:flex-row">
           <Link href="/dashboard/cuidador/buscar" className={heroAccentButtonClass}>

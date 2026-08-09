@@ -281,6 +281,7 @@ async function main() {
     longitude: p.longitude,
     neededCareTypes: p.neededCareTypes,
     hourlyBudget: p.hourlyBudget ? Number(p.hourlyBudget) : null,
+    visibleToCaregivers: p.visibleToCaregivers,
   }));
   const caregivers = caregiverProfiles.map((p) => {
     const ratings = p.user.reviewsReceived.map((r) => r.rating);
@@ -298,6 +299,8 @@ async function main() {
           ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
           : null,
       reviewCount: ratings.length,
+      visibleToFamilies: p.visibleToFamilies,
+      availabilityStatus: p.availabilityStatus,
     };
   });
 

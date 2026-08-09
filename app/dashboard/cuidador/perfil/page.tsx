@@ -31,6 +31,7 @@ export default async function EditarPerfilCuidadorPage() {
             hourlyRate: profile?.hourlyRate ? profile.hourlyRate.toString() : "",
             experienceYears: profile?.experienceYears?.toString() ?? "",
             careTypes: profile?.careTypes ?? [],
+            visibleToFamilies: profile?.visibleToFamilies ?? true,
           }}
         />
       </div>

@@ -30,6 +30,7 @@ type InitialProfile = {
   hourlyRate: string;
   experienceYears: string;
   careTypes: string[];
+  visibleToFamilies: boolean;
 };
 
 export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile }) {
@@ -42,6 +43,9 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
     experienceYears: initialProfile.experienceYears,
   });
   const [careTypes, setCareTypes] = useState<string[]>(initialProfile.careTypes);
+  const [visibleToFamilies, setVisibleToFamilies] = useState(
+    initialProfile.visibleToFamilies
+  );
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,6 +89,7 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
           hourlyRate: form.hourlyRate ? Number(form.hourlyRate) : undefined,
           experienceYears: form.experienceYears ? Number(form.experienceYears) : undefined,
           careTypes,
+          visibleToFamilies,
         }),
       });
 
@@ -197,6 +202,22 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
             onChange={(event) => update("bio", event.target.value)}
             className={inputClass}
           />
+        </div>
+        <div>
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={visibleToFamilies}
+              onChange={(event) => setVisibleToFamilies(event.target.checked)}
+              className="h-4 w-4 rounded border-muted/40 text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            />
+            Permitir que famílias me encontrem
+          </label>
+          <p className="mt-1 text-xs text-muted">
+            Se desativado, seu perfil não aparece nas buscas nem no match
+            perfeito de nenhuma família -- você ainda pode buscar e
+            demonstrar interesse em famílias normalmente.
+          </p>
         </div>
 
         {status === "error" && message && <p className={errorTextClass}>{message}</p>}

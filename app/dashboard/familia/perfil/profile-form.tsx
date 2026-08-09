@@ -29,6 +29,7 @@ type InitialProfile = {
   bio: string;
   hourlyBudget: string;
   neededCareTypes: string[];
+  visibleToCaregivers: boolean;
 };
 
 export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile }) {
@@ -42,6 +43,9 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
   });
   const [neededCareTypes, setNeededCareTypes] = useState<string[]>(
     initialProfile.neededCareTypes
+  );
+  const [visibleToCaregivers, setVisibleToCaregivers] = useState(
+    initialProfile.visibleToCaregivers
   );
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -86,6 +90,7 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
           bio: form.bio || undefined,
           hourlyBudget: form.hourlyBudget ? Number(form.hourlyBudget) : undefined,
           neededCareTypes,
+          visibleToCaregivers,
         }),
       });
 
@@ -191,6 +196,22 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
             onChange={(event) => update("bio", event.target.value)}
             className={inputClass}
           />
+        </div>
+        <div>
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={visibleToCaregivers}
+              onChange={(event) => setVisibleToCaregivers(event.target.checked)}
+              className="h-4 w-4 rounded border-muted/40 text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            />
+            Permitir que cuidadores me encontrem e demonstrem interesse
+          </label>
+          <p className="mt-1 text-xs text-muted">
+            Se desativado, seu perfil não aparece nas buscas nem no match
+            perfeito de nenhum cuidador -- você ainda pode buscar e
+            contratar cuidadores normalmente.
+          </p>
         </div>
 
         {status === "error" && message && <p className={errorTextClass}>{message}</p>}

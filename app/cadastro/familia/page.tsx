@@ -53,6 +53,7 @@ export default function CadastroFamiliaPage() {
   const router = useRouter();
   const [form, setForm] = useState(INITIAL_FORM);
   const [neededCareTypes, setNeededCareTypes] = useState<string[]>([]);
+  const [visibleToCaregivers, setVisibleToCaregivers] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -120,6 +121,7 @@ export default function CadastroFamiliaPage() {
           bio: form.bio || undefined,
           hourlyBudget: form.hourlyBudget ? Number(form.hourlyBudget) : undefined,
           neededCareTypes,
+          visibleToCaregivers,
         }),
       });
 
@@ -302,6 +304,22 @@ export default function CadastroFamiliaPage() {
               onChange={(event) => update("bio", event.target.value)}
               className={inputClass}
             />
+          </div>
+          <div>
+            <label className="flex items-center gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={visibleToCaregivers}
+                onChange={(event) => setVisibleToCaregivers(event.target.checked)}
+                className="h-4 w-4 rounded border-muted/40 text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              />
+              Permitir que cuidadores me encontrem e demonstrem interesse
+            </label>
+            <p className="mt-1 text-xs text-muted">
+              Se desativado, seu perfil não aparece nas buscas nem no match
+              perfeito de nenhum cuidador -- você ainda pode buscar e
+              contratar cuidadores normalmente.
+            </p>
           </div>
 
           {error && <p className={errorTextClass}>{error}</p>}

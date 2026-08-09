@@ -1,4 +1,4 @@
-import { CareType, HireStatus, Role } from "@prisma/client";
+import { CareType, CaregiverAvailability, HireStatus, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 import { buildGeocodeQuery, geocodeAddress, GeocodeResult } from "@/lib/geocoding";
@@ -92,6 +92,12 @@ type CaregiverSeed = {
   careTypes: CareType[];
   hourlyRate: number;
   experienceYears: number;
+  availabilityStatus: CaregiverAvailability;
+  // Optional, defaults to true (visible) when omitted -- only one seed
+  // caregiver sets this to false, to demonstrate the control actually
+  // hides them from family search/matching (see CLAUDE.md "Dados de
+  // demonstração").
+  visibleToFamilies?: boolean;
 };
 
 type FamilySeed = {
@@ -103,6 +109,14 @@ type FamilySeed = {
   state: string;
   bio: string;
   neededCareTypes: CareType[];
+  // Optional, left undefined on one family on purpose -- exercises
+  // computePriceScore's neutral/relative fallback layers (no budget
+  // declared). See CLAUDE.md "Dados de demonstração".
+  hourlyBudget?: number;
+  // Optional, defaults to true (visible) when omitted -- only one seed
+  // family sets this to false, to demonstrate the control actually hides
+  // them from caregiver search/matching.
+  visibleToCaregivers?: boolean;
 };
 
 // Real streets/neighborhoods in Goiânia and its metropolitan region, each
@@ -125,6 +139,7 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
     careTypes: [CareType.ELDERLY],
     hourlyRate: 25,
     experienceYears: 8,
+    availabilityStatus: CaregiverAvailability.AVAILABLE,
   },
   {
     email: `cuidador2${EMAIL_DOMAIN}`,
@@ -138,6 +153,7 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
     careTypes: [CareType.CHILD],
     hourlyRate: 20,
     experienceYears: 1,
+    availabilityStatus: CaregiverAvailability.BUSY,
   },
   {
     email: `cuidador3${EMAIL_DOMAIN}`,
@@ -151,6 +167,7 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
     careTypes: [CareType.ELDERLY, CareType.CHILD],
     hourlyRate: 35,
     experienceYears: 6,
+    availabilityStatus: CaregiverAvailability.AVAILABLE,
   },
   {
     email: `cuidador4${EMAIL_DOMAIN}`,
@@ -164,6 +181,7 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
     careTypes: [CareType.ELDERLY, CareType.CHILD, CareType.SPECIAL_NEEDS],
     hourlyRate: 45,
     experienceYears: 12,
+    availabilityStatus: CaregiverAvailability.BUSY,
   },
   {
     email: `cuidador5${EMAIL_DOMAIN}`,
@@ -177,6 +195,10 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
     careTypes: [CareType.CHILD, CareType.SPECIAL_NEEDS],
     hourlyRate: 60,
     experienceYears: 15,
+    availabilityStatus: CaregiverAvailability.UNAVAILABLE,
+    // Demonstrates visibleToFamilies actually hiding a caregiver from
+    // family search/matching -- see CLAUDE.md "Dados de demonstração".
+    visibleToFamilies: false,
   },
 ];
 
@@ -190,6 +212,10 @@ const FAMILY_SEEDS: FamilySeed[] = [
     state: "GO",
     bio: "Buscamos cuidador(a) para nossa mãe idosa, com mobilidade reduzida.",
     neededCareTypes: [CareType.ELDERLY],
+    // Below what the ELDERLY-capable caregivers charge (cuidador1 R$25,
+    // cuidador3 R$35, cuidador4 R$45) -- exercises computePriceScore's
+    // budget layer with the caregiver over budget.
+    hourlyBudget: 20,
   },
   {
     email: `familia2${EMAIL_DOMAIN}`,
@@ -200,6 +226,13 @@ const FAMILY_SEEDS: FamilySeed[] = [
     state: "GO",
     bio: "Precisamos de apoio no cuidado dos nossos filhos gêmeos, período vespertino.",
     neededCareTypes: [CareType.CHILD],
+    // Above what every CHILD-capable caregiver charges (cuidador2 R$20,
+    // cuidador3 R$35, cuidador4 R$45, cuidador5 R$60) -- exercises
+    // computePriceScore's budget layer with every candidate within budget.
+    hourlyBudget: 70,
+    // Demonstrates visibleToCaregivers actually hiding a family from
+    // caregiver search/matching -- see CLAUDE.md "Dados de demonstração".
+    visibleToCaregivers: false,
   },
   {
     email: `familia3${EMAIL_DOMAIN}`,
@@ -221,6 +254,11 @@ const HIRE_SEEDS: Array<{
   familyIndex: number;
   caregiverIndex: number;
   status: HireStatus;
+  // Must be within the real overlap between FAMILY_SEEDS[familyIndex]
+  // .neededCareTypes and CAREGIVER_SEEDS[caregiverIndex].careTypes -- same
+  // rule POST /api/hires enforces server-side (see CLAUDE.md "Tipo de
+  // cuidado do Hire").
+  careType: CareType;
   message?: string;
   review?: { rating: number; comment: string };
 }> = [
@@ -228,6 +266,7 @@ const HIRE_SEEDS: Array<{
     familyIndex: 0,
     caregiverIndex: 0,
     status: HireStatus.COMPLETED,
+    careType: CareType.ELDERLY,
     review: {
       rating: 5,
       comment: "Ana foi maravilhosa com minha mãe, muito atenciosa e pontual!",
@@ -237,6 +276,7 @@ const HIRE_SEEDS: Array<{
     familyIndex: 1,
     caregiverIndex: 1,
     status: HireStatus.COMPLETED,
+    careType: CareType.CHILD,
     review: {
       rating: 3,
       comment: "Bom cuidado com as crianças, mas às vezes chegou atrasado.",
@@ -246,12 +286,14 @@ const HIRE_SEEDS: Array<{
     familyIndex: 2,
     caregiverIndex: 3,
     status: HireStatus.PENDING,
+    careType: CareType.SPECIAL_NEEDS,
     message: "Olá Diego, gostaríamos de contratar seus serviços para cuidar da minha avó e do meu sobrinho.",
   },
   {
     familyIndex: 0,
     caregiverIndex: 3,
     status: HireStatus.ACCEPTED,
+    careType: CareType.ELDERLY,
     message: "Precisaríamos de apoio adicional nos fins de semana, além do cuidado já combinado.",
   },
 ];
@@ -302,6 +344,8 @@ async function seedCaregivers(hashedPassword: string) {
             careTypes: seed.careTypes,
             hourlyRate: seed.hourlyRate,
             experienceYears: seed.experienceYears,
+            availabilityStatus: seed.availabilityStatus,
+            visibleToFamilies: seed.visibleToFamilies ?? true,
             latitude: geocoded?.latitude,
             longitude: geocoded?.longitude,
           },
@@ -340,6 +384,8 @@ async function seedFamilies(hashedPassword: string) {
             state: seed.state,
             bio: seed.bio,
             neededCareTypes: seed.neededCareTypes,
+            hourlyBudget: seed.hourlyBudget,
+            visibleToCaregivers: seed.visibleToCaregivers ?? true,
             latitude: geocoded?.latitude,
             longitude: geocoded?.longitude,
           },
@@ -382,6 +428,7 @@ async function seedHires(
         familyId,
         caregiverId,
         status: hireSeed.status,
+        careType: hireSeed.careType,
         message: hireSeed.message,
         activeHireKey: isActive ? `${familyId}:${caregiverId}` : null,
       },

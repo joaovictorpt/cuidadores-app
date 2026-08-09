@@ -31,6 +31,7 @@ export default async function EditarPerfilFamiliaPage() {
             bio: profile?.bio ?? "",
             hourlyBudget: profile?.hourlyBudget ? profile.hourlyBudget.toString() : "",
             neededCareTypes: profile?.neededCareTypes ?? [],
+            visibleToCaregivers: profile?.visibleToCaregivers ?? true,
           }}
         />
       </div>

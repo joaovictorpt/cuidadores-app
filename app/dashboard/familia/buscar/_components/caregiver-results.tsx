@@ -4,6 +4,7 @@ import { CareType } from "@prisma/client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { AvailabilityBadge } from "@/app/components/availability-badge";
 import { AvatarPlaceholder } from "@/app/dashboard/familia/_components/avatar-placeholder";
 import { MatchScoreRing } from "@/app/dashboard/familia/_components/match-score-ring";
 import { ContratarButton } from "@/app/dashboard/familia/_components/contratar-button";
@@ -90,14 +91,17 @@ export function CaregiverResults({
               <div className="flex items-start gap-4">
                 <AvatarPlaceholder name={caregiver.name} />
                 <div>
-                  <h2 className="font-display text-xl font-semibold text-ink">
-                    <Link
-                      href={`/dashboard/profile/caregiver/${caregiver.userId}`}
-                      className="hover:underline"
-                    >
-                      {caregiver.name ?? "Cuidador"}
-                    </Link>
-                  </h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-display text-xl font-semibold text-ink">
+                      <Link
+                        href={`/dashboard/profile/caregiver/${caregiver.userId}`}
+                        className="hover:underline"
+                      >
+                        {caregiver.name ?? "Cuidador"}
+                      </Link>
+                    </h2>
+                    <AvailabilityBadge status={caregiver.availabilityStatus} />
+                  </div>
                   {caregiver.bio && (
                     <p className="mt-1 text-sm text-muted">{caregiver.bio}</p>
                   )}

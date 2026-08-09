@@ -483,6 +483,96 @@ compartilhado por `GET /api/matching/stable-match/caregiver` e por
 `/dashboard/cuidador/match-perfeito` (Fase 2, abaixo) — nenhum dos dois
 reimplementa a busca em `matchesByCaregiver`.
 
+## Controles de privacidade e disponibilidade
+
+Três campos novos, um de cada lado do grafo mais um puramente informativo:
+
+- **`FamilyProfile.visibleToCaregivers` (`Boolean @default(true)`)**: se
+  `false`, a família some de toda busca/matching *do ponto de vista do
+  cuidador* — `GET /api/search/families`, `buildCaregiverPreferences`
+  (Gale-Shapley) e, por consequência, `/dashboard/cuidador/match-perfeito`.
+  **Nunca** afeta a própria busca dessa família por cuidadores — visibilidade
+  é direcional, não um "modo oculto" geral da conta.
+- **`CaregiverProfile.visibleToFamilies` (`Boolean @default(true)`)**: o
+  espelho exato do campo acima, do outro lado — afeta
+  `GET /api/search/caregivers`, `buildFamilyPreferences` e
+  `/dashboard/familia/match-recomendado`, nunca a própria busca do cuidador
+  por famílias.
+- **`CaregiverProfile.availabilityStatus` (enum `CaregiverAvailability`:
+  `AVAILABLE` | `BUSY` | `UNAVAILABLE`, `@default(AVAILABLE)`)**:
+  puramente informativo — nunca filtra nem reordena nenhum resultado de
+  busca/matching (diferente de `visibleToFamilies`, que remove o cuidador
+  por completo). Um cuidador `BUSY`/`UNAVAILABLE` continua aparecendo
+  normalmente na busca da família e no Gale-Shapley, só com um selo
+  diferente — a intenção é sinalizar "não aceito mais serviços agora" sem
+  esconder o perfil, que são decisões distintas (por isso dois campos
+  separados, não um único enum com um valor "invisível").
+
+**Onde a filtragem realmente acontece (`lib/matching.ts`)**: os dois campos
+de visibilidade foram adicionados a `FamilyForMatching`/`CaregiverForMatching`,
+mas a checagem **não** vive em `isEligiblePair` — essa função recebe um lado
+"fixo" (quem está buscando) e um lado "candidato" (a lista sendo filtrada), e
+qual argumento é qual se inverte conforme a direção da busca. Colocar a
+checagem ali filtraria incorretamente com base na *própria* visibilidade de
+quem está buscando. Em vez disso, a checagem vive nos dois wrappers que
+filtram exclusivamente a lista de candidatos: `findCandidateCaregivers`
+(`caregiver.visibleToFamilies`) e `findCandidateFamilies`
+(`familyProfile.visibleToCaregivers`) — cada um só olha o campo do lado que
+está sendo filtrado, nunca o do lado fixo. Isso garante a simetria exigida:
+a visibilidade de um lado nunca vaza pra busca desse mesmo lado.
+`availabilityStatus` não entra nesse filtro em nenhum ponto — só é
+carregado através de `CaregiverForMatching` até as respostas de busca
+(`GET /api/search/caregivers`) e a página `/dashboard/familia/buscar` para
+exibição.
+
+**Efeito colateral automático no Gale-Shapley, sem código extra**: um
+cuidador invisível nunca entra na lista de preferências de nenhuma família
+(`buildFamilyPreferences` usa `findCandidateCaregivers` por baixo), então
+nenhuma família jamais propõe a ele — `stableMatching`
+(`lib/gale-shapley.ts`) já trata "receptor nunca listado no meu preference
+list" como cenário normal (proposta segue pra próxima opção), sem precisar
+de nenhuma checagem de visibilidade dentro do algoritmo em si. O mesmo vale
+no sentido inverso para uma família invisível: ela ainda propõe
+normalmente (sua própria lista de preferências não é afetada pela própria
+visibilidade), mas nenhum cuidador a aceita, porque ela nunca aparece nas
+listas de preferência deles (`buildCaregiverPreferences` usa
+`findCandidateFamilies`).
+
+**UI**:
+- Checkbox "Permitir que cuidadores me encontrem e demonstrem interesse"
+  (marcado por padrão) em `app/cadastro/familia/page.tsx` e no
+  `profile-form.tsx` da família — mesmo padrão visual dos checkboxes de
+  tipo de cuidado já existentes nesses formulários.
+- Checkbox espelhado "Permitir que famílias me encontrem" só no
+  `profile-form.tsx` do cuidador (não no cadastro do cuidador — assimetria
+  intencional, escopo definido explicitamente na tarefa que introduziu
+  esses campos).
+- `app/dashboard/cuidador/_components/availability-control.tsx`
+  (`AvailabilityControl`, Client Component): controle rápido de
+  `availabilityStatus`, deliberadamente fora de "Editar perfil" — fica logo
+  abaixo da saudação em `app/dashboard/cuidador/page.tsx`, salva via
+  `PATCH /api/caregiver-profile` a cada clique (sem precisar abrir a tela
+  de edição completa). Reaproveita o mesmo estilo de pílula ativa/inativa
+  já usado pelas pílulas de ordenação de `/buscar`
+  (`bg-accent-light`/`text-accent` ativa, borda neutra inativa) em vez de
+  inventar um novo padrão de toggle.
+- `app/components/availability-badge.tsx` (`AvailabilityBadge`): selo
+  somente-leitura, usado em `/dashboard/familia/buscar`
+  (`caregiver-results.tsx`, ao lado do nome) e em
+  `/dashboard/profile/caregiver/[id]` — os dois únicos lugares pedidos
+  explicitamente para mostrar o status a uma família. `AVAILABLE` reaproveita
+  o mesmo par `bg-primary-light`/`text-primary` de `CareTypeTags`; `BUSY`
+  reaproveita o mesmo tratamento visual "chama atenção"
+  (`border-accent/40`/`bg-accent-light`) já usado no card "Solicitações" do
+  dashboard do cuidador quando há pendências — não uma cor nova, já que a
+  paleta é deliberadamente monocromática (ver "Sistema de design");
+  `UNAVAILABLE` usa o mesmo tom apagado (`border-muted/30`/`text-muted`) já
+  usado pelo pill "Recebido" de `getHireDirectionLabel`.
+- `lib/availability.ts`: `AVAILABILITY_LABELS` (mesmo padrão de
+  `CARE_TYPE_LABELS` em `lib/care-types.ts`) e `AVAILABILITY_OPTIONS` (ordem
+  de exibição do controle do dashboard), fonte única compartilhada pelo
+  badge e pelo controle.
+
 ## Telas do cuidador — busca e match perfeito (Fase 2)
 
 Duas páginas novas, espelhando as equivalentes do lado família tela por
@@ -1636,14 +1726,41 @@ contratações e avaliações) para usar ao vivo na apresentação do TCC. Roda 
   executa seu próprio `main()` quando rodado diretamente (`require.main ===
   module`), então importar `cleanup` dali não dispara um seed completo como
   efeito colateral.
-- **Nenhuma `FamilySeed` tem `hourlyBudget` preenchido ainda** (campo
-  adicionado depois de `seed-demo.ts` já existir) — as 3 famílias demo
-  continuam caindo na camada 2/3 de `computePriceScore` (fallback neutro
-  ou normalização relativa, nunca a comparação real de orçamento). O
-  caminho "com orçamento" foi validado sem tocar o dataset de demo/produção
-  — ver o cenário `seedBudgetScenario` em `scripts/test-matching.ts`, que
-  cria e limpa sua própria família fictícia com `hourlyBudget` real. Se o
-  caminho com orçamento precisar aparecer numa apresentação ao vivo, dá pra
-  editar temporariamente `FamilyProfile.hourlyBudget` de uma das contas
-  demo antes de rodar a busca (ou preencher pela própria tela de perfil,
-  logado como a conta demo).
+- **`hourlyBudget` em 2 das 3 `FamilySeed`, uma acima e uma abaixo do que os
+  cuidadores cobram** — família1 (Pereira, precisa `ELDERLY`) tem
+  `hourlyBudget: 20`, abaixo dos três cuidadores que atendem `ELDERLY`
+  (cuidador1 R$25, cuidador3 R$35, cuidador4 R$45): todos aparecem "acima do
+  orçamento" na camada 1 de `computePriceScore`. Família2 (Souza, precisa
+  `CHILD`) tem `hourlyBudget: 70`, acima dos quatro cuidadores que atendem
+  `CHILD` (R$20 a R$60): todos "dentro do orçamento". Família3 (Ribeiro)
+  continua **sem** `hourlyBudget`, de propósito — é quem exercita a
+  camada 2/3 de fallback (normalização relativa ou neutro, nunca a
+  comparação real de orçamento). O caminho "com orçamento" também continua
+  coberto isoladamente pelo cenário `seedBudgetScenario` em
+  `scripts/test-matching.ts` (família fictícia própria, criada e limpa à
+  parte do dataset de demo).
+- **`visibleToCaregivers: false` em família2 (Souza)** — demonstra o
+  controle de visibilidade da família funcionando: ela some da busca e do
+  match perfeito de qualquer cuidador (confirmado manualmente: cuidador3,
+  que atende `CHILD` e ficaria elegível por distância/tipo, não vê Souza na
+  busca), mas continua enxergando cuidadores normalmente na própria busca
+  dela.
+- **`visibleToFamilies: false` em cuidador5 (Elisa)** — o espelho do ponto
+  acima do outro lado: some da busca/match de qualquer família (confirmado
+  com família3, que precisa `SPECIAL_NEEDS`+`CHILD` e ficaria elegível para
+  Elisa por tipo/distância), mas continua enxergando famílias normalmente na
+  própria busca dela.
+- **`availabilityStatus` variado entre os 5 cuidadores**, cobrindo os três
+  valores do enum: `AVAILABLE` (cuidador1 Ana Paula, cuidador3 Camila),
+  `BUSY` (cuidador2 Bruno, cuidador4 Diego) e `UNAVAILABLE` (cuidador5
+  Elisa — que também está com `visibleToFamilies: false`, uma combinação
+  narrativamente coerente: indisponível *e* fora de busca).
+- **`Hire.careType` preenchido nos 4 `HIRE_SEEDS`**, cada um com um valor
+  real dentro da interseção de tipos entre a família e o cuidador daquele
+  par específico (mesma regra que `POST /api/hires` valida no servidor —
+  ver "Tipo de cuidado do Hire"): família1×cuidador1 e família1×cuidador4
+  usam `ELDERLY` (única opção no primeiro par; escolha entre três no
+  segundo), família2×cuidador2 usa `CHILD` (única opção), família3×
+  cuidador4 usa `SPECIAL_NEEDS` (escolha entre três, alinhada com "sobrinho
+  com necessidades especiais" na bio de família3). Nenhum `Hire` de demo
+  fica mais com `careType: null`.

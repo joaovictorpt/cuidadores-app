@@ -16,6 +16,7 @@ const updateSchema = z.object({
   bio: z.string().optional(),
   hourlyBudget: z.number().positive().optional(),
   neededCareTypes: z.array(z.nativeEnum(CareType)).optional(),
+  visibleToCaregivers: z.boolean().optional(),
 });
 
 export async function GET() {

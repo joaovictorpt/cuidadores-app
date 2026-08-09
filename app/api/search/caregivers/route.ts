@@ -65,6 +65,9 @@ export async function GET() {
     careTypes: caregiver.careTypes,
     averageRating: caregiver.averageRating,
     reviewCount: caregiver.reviewCount,
+    // Purely informational -- never used to filter/reorder, see
+    // CaregiverForMatching in lib/matching.ts.
+    availabilityStatus: caregiver.availabilityStatus,
     distanceKm: Math.round(distanceKm * 10) / 10,
     matchScore: Math.round(matchScore * 1000) / 1000,
   }));

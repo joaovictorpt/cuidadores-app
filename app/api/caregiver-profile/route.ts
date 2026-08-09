@@ -1,4 +1,4 @@
-import { CareType, Prisma, Role } from "@prisma/client";
+import { CaregiverAvailability, CareType, Prisma, Role } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -16,6 +16,8 @@ const updateSchema = z.object({
   hourlyRate: z.number().positive().optional(),
   experienceYears: z.number().int().nonnegative().optional(),
   careTypes: z.array(z.nativeEnum(CareType)).optional(),
+  visibleToFamilies: z.boolean().optional(),
+  availabilityStatus: z.nativeEnum(CaregiverAvailability).optional(),
 });
 
 export async function GET() {

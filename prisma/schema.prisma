@@ -90,6 +90,12 @@ model FamilyProfile {
   longitude        Float?
   neededCareTypes  CareType[]
 
+  // Whether this family shows up when a caregiver browses/searches families
+  // or gets matched via Gale-Shapley (see lib/matching.ts findCandidateFamilies).
+  // Never affects this family's own search for caregivers -- visibility is
+  // one-directional, per side.
+  visibleToCaregivers Boolean @default(true)
+
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 }
@@ -110,6 +116,16 @@ model CaregiverProfile {
   latitude        Float?
   longitude       Float?
 
+  // Whether this caregiver shows up when a family browses/searches
+  // caregivers or gets matched via Gale-Shapley (see lib/matching.ts
+  // findCandidateCaregivers). Never affects this caregiver's own search for
+  // families -- visibility is one-directional, per side.
+  visibleToFamilies  Boolean               @default(true)
+  // Purely informational -- shown as a badge wherever a caregiver is
+  // displayed to a family, never used to filter or reorder search/matching
+  // results (see lib/matching.ts).
+  availabilityStatus CaregiverAvailability @default(AVAILABLE)
+
   documents       Document[]
 
   createdAt       DateTime   @default(now())
@@ -120,6 +136,12 @@ enum CareType {
   ELDERLY
   CHILD
   SPECIAL_NEEDS
+}
+
+enum CaregiverAvailability {
+  AVAILABLE
+  BUSY
+  UNAVAILABLE
 }
 
 model Document {

@@ -50,6 +50,7 @@ const familySchema = z.object({
   bio: z.string().optional(),
   hourlyBudget: z.number().positive().optional(),
   neededCareTypes: z.array(z.nativeEnum(CareType)).optional(),
+  visibleToCaregivers: z.boolean().optional(),
 });
 
 const caregiverSchema = z.object({
@@ -114,6 +115,7 @@ export async function POST(request: Request) {
             bio: data.bio,
             hourlyBudget: data.hourlyBudget,
             neededCareTypes: data.neededCareTypes ?? [],
+            visibleToCaregivers: data.visibleToCaregivers,
             latitude: geocoded?.latitude,
             longitude: geocoded?.longitude,
           },
