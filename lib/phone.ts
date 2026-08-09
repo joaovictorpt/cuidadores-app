@@ -16,3 +16,39 @@ export const PHONE_INVALID_MESSAGE =
 export function isCompletePhone(digits: string): boolean {
   return PHONE_REGEX.test(digits);
 }
+
+// Strips anything but digits -- defensive belt for the three helpers below:
+// the app only ever stores digits-only phones (see PhoneInput), but these
+// build user-facing URIs, so a stray formatting character slipping through
+// shouldn't produce a broken tel:/wa.me link.
+function sanitizePhoneDigits(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
+// Read-only display formatting ("(XX) XXXXX-XXXX") -- mirrors the mask
+// app/components/phone-input.tsx applies while typing, but for contexts
+// (Hire contact info) that only ever show an already-saved number, so
+// react-number-format's live-editing behavior isn't needed. Falls back to
+// the raw digits for anything that doesn't look like a complete phone,
+// rather than showing a malformed partial mask.
+export function formatPhoneForDisplay(phone: string): string {
+  const digits = sanitizePhoneDigits(phone);
+
+  if (!isCompletePhone(digits)) {
+    return digits;
+  }
+
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+// tel: URI, Brazil country code (+55) prepended -- phone is always stored
+// as DDD + number only, never with a country code.
+export function buildTelUri(phone: string): string {
+  return `tel:+55${sanitizePhoneDigits(phone)}`;
+}
+
+// wa.me deep link -- same +55<digits> shape WhatsApp's own link format
+// requires, no punctuation.
+export function buildWhatsAppUrl(phone: string): string {
+  return `https://wa.me/55${sanitizePhoneDigits(phone)}`;
+}

@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { HireStatus, Role } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -12,9 +12,10 @@ import {
   HIRE_ACTION_LABELS,
   HIRE_STATUS_LABELS,
 } from "@/lib/hire-labels";
+import { buildTelUri } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { formatRelativeTime } from "@/lib/relative-time";
-import { metaTextClass } from "@/lib/ui";
+import { metaTextClass, secondaryButtonClass } from "@/lib/ui";
 
 export default async function SolicitacoesPage() {
   const session = await getServerSession(authOptions);
@@ -25,7 +26,15 @@ export default async function SolicitacoesPage() {
 
   const hires = await prisma.hire.findMany({
     where: { caregiverId: session.user.id },
-    include: { family: { select: { name: true, email: true } } },
+    include: {
+      family: {
+        select: {
+          name: true,
+          email: true,
+          familyProfile: { select: { phone: true } },
+        },
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -51,6 +60,9 @@ export default async function SolicitacoesPage() {
               Role.CAREGIVER,
               hire.initiatedBy
             );
+            const familyPhone = hire.family.familyProfile?.phone;
+            const showContact =
+              hire.status === HireStatus.ACCEPTED && Boolean(familyPhone);
 
             return (
               <div
@@ -88,8 +100,8 @@ export default async function SolicitacoesPage() {
                   </span>
                 </div>
 
-                {actions.length > 0 && (
-                  <div className="mt-4 flex gap-2">
+                {(actions.length > 0 || showContact) && (
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {actions.map((action) => (
                       <HireActionButton
                         key={action}
@@ -98,6 +110,11 @@ export default async function SolicitacoesPage() {
                         label={HIRE_ACTION_LABELS[action] ?? action}
                       />
                     ))}
+                    {showContact && familyPhone && (
+                      <a href={buildTelUri(familyPhone)} className={secondaryButtonClass}>
+                        Contato
+                      </a>
+                    )}
                   </div>
                 )}
               </div>

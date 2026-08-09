@@ -1,3 +1,4 @@
+import { HireStatus } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import { notFound, redirect } from "next/navigation";
 
@@ -6,8 +7,14 @@ import { BackLink } from "@/app/dashboard/_components/back-link";
 import { authOptions } from "@/lib/auth";
 import { formatDuration } from "@/lib/duration";
 import { getHireDirectionLabel, HIRE_STATUS_LABELS } from "@/lib/hire-labels";
+import {
+  buildTelUri,
+  buildWhatsAppUrl,
+  formatPhoneForDisplay,
+} from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { formatRelativeTime } from "@/lib/relative-time";
+import { secondaryButtonClass } from "@/lib/ui";
 
 function formatTimelineEntry(date: Date): string {
   return `${date.toLocaleString("pt-BR")} (${formatRelativeTime(date)})`;
@@ -33,8 +40,20 @@ export default async function HireDetailPage({
   const hire = await prisma.hire.findUnique({
     where: { id },
     include: {
-      family: { select: { name: true, email: true } },
-      caregiver: { select: { name: true, email: true } },
+      family: {
+        select: {
+          name: true,
+          email: true,
+          familyProfile: { select: { phone: true } },
+        },
+      },
+      caregiver: {
+        select: {
+          name: true,
+          email: true,
+          caregiverProfile: { select: { phone: true } },
+        },
+      },
       review: { include: { author: { select: { name: true } } } },
     },
   });
@@ -51,9 +70,19 @@ export default async function HireDetailPage({
   }
 
   const otherParty = isFamily ? hire.caregiver : hire.family;
+  const otherPartyPhone = isFamily
+    ? hire.caregiver.caregiverProfile?.phone
+    : hire.family.familyProfile?.phone;
   const backHref = isFamily
     ? "/dashboard/familia/contratacoes"
     : "/dashboard/cuidador/solicitacoes";
+
+  // Contact info only surfaces once the arrangement is confirmed
+  // (ACCEPTED/COMPLETED) -- never while still PENDING (nothing to contact
+  // about yet) or after REJECTED/CANCELLED (the relationship never
+  // materialized).
+  const canShowContact =
+    hire.status === HireStatus.ACCEPTED || hire.status === HireStatus.COMPLETED;
 
   const durationLabel =
     hire.acceptedAt && hire.completedAt
@@ -79,6 +108,30 @@ export default async function HireDetailPage({
               {HIRE_STATUS_LABELS[hire.status]}
             </span>
           </div>
+
+          {canShowContact && otherPartyPhone && (
+            <div className="mt-6">
+              <h2 className="text-xs font-medium uppercase text-muted">
+                Contato
+              </h2>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <a
+                  href={buildTelUri(otherPartyPhone)}
+                  className="font-mono text-sm font-medium text-primary hover:underline"
+                >
+                  {formatPhoneForDisplay(otherPartyPhone)}
+                </a>
+                <a
+                  href={buildWhatsAppUrl(otherPartyPhone)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={secondaryButtonClass}
+                >
+                  WhatsApp
+                </a>
+              </div>
+            </div>
+          )}
 
           {hire.message && (
             <div className="mt-6">

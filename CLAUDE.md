@@ -717,6 +717,43 @@ mais próximo é mais preciso que sempre truncar pra baixo). Se
 migration, ou ainda não chegou nesse ponto do fluxo), mostra "Duração não
 disponível" em vez de tentar calcular com dado faltando.
 
+**Exposição condicional de telefone**: o telefone da outra parte só
+aparece depois que a relação está confirmada — `ACCEPTED` ou `COMPLETED`
+— nunca em `PENDING` (ainda não houve aceite, não faz sentido dar contato
+antes disso) nem em `REJECTED`/`CANCELLED` (a relação não se concretizou).
+`lib/phone.ts` ganhou três helpers só de formatação/URI (nenhuma validação
+nova — isso continua em `isCompletePhone`/`PHONE_REGEX`, já existentes):
+`formatPhoneForDisplay` (dígitos crus → `"(XX) XXXXX-XXXX"`, mesma máscara
+visual de `PhoneInput`, mas sem a dependência do react-number-format já
+que aqui é só leitura, nunca edição), `buildTelUri` (`tel:+55<dígitos>`) e
+`buildWhatsAppUrl` (`https://wa.me/55<dígitos>`) — os dois com um strip
+defensivo de qualquer caractere não-numérico antes de montar a URL, mesmo
+o telefone já sendo salvo só em dígitos.
+- **Como o telefone mora em `FamilyProfile`/`CaregiverProfile`, não em
+  `User`** (ver "Autenticação"), as duas relações de `Hire` (`family`,
+  `caregiver` — ambas apontam pra `User`) precisaram de um `select`
+  aninhado (`familyProfile: { select: { phone: true } }` /
+  `caregiverProfile: { select: { phone: true } }`) em todo lugar que
+  precisa mostrar telefone — `/dashboard/hires/[id]` e as duas listas.
+- **`/dashboard/hires/[id]`**: seção "Contato" com o número formatado como
+  link `tel:` e um botão separado pro WhatsApp (`target="_blank"`),
+  renderizada só quando `canShowContact` (`status === ACCEPTED ||
+  status === COMPLETED`) **e** o telefone da outra parte existir — perfis
+  antigos ou incompletos sem telefone salvo simplesmente não mostram a
+  seção, em vez de renderizar um link quebrado.
+- **`/dashboard/familia/contratacoes` e `/dashboard/cuidador/solicitacoes`**:
+  um link "Contato" (`tel:` direto, sem WhatsApp — esse fica reservado pra
+  tela de detalhe) ao lado dos botões de ação, mas **só quando
+  `status === ACCEPTED`** — de propósito, não quando `COMPLETED` também,
+  já que o contato rápido pela lista serve principalmente pra combinar o
+  serviço enquanto ele está em andamento; uma vez `COMPLETED`, quem quiser
+  o telefone ainda pode abrir "Ver detalhes". Isso mudou a condição que já
+  envolvia o bloco de botões de ação: antes só renderizava esse bloco
+  quando `actions.length > 0`, agora é `actions.length > 0 || showContact`,
+  já que em teoria um `Hire` `ACCEPTED` sempre tem pelo menos uma ação
+  disponível (`getAvailableActions`), mas a condição fica correta mesmo se
+  isso um dia deixar de ser verdade.
+
 ## Dashboards
 
 `app/dashboard/familia/page.tsx` e `app/dashboard/cuidador/page.tsx` eram só
