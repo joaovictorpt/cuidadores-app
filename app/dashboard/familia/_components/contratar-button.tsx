@@ -1,66 +1,51 @@
 "use client";
 
+import { CareType } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
-import { accentButtonClass, errorTextClass } from "@/lib/ui";
+import {
+  CreateHireResult,
+  HireActionWithCareType,
+} from "@/app/dashboard/_components/hire-action-with-care-type";
 
-export function ContratarButton({ caregiverUserId }: { caregiverUserId: string }) {
+export function ContratarButton({
+  caregiverUserId,
+  sharedCareTypes,
+}: {
+  caregiverUserId: string;
+  sharedCareTypes: CareType[];
+}) {
   const router = useRouter();
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
-    "idle"
-  );
-  const [message, setMessage] = useState<string | null>(null);
 
-  async function handleClick() {
-    setStatus("loading");
-    setMessage(null);
+  // Network/parse errors are left to throw -- HireActionWithCareType's
+  // submit() already wraps this call in try/catch and falls back to a
+  // generic connection-error message, so there's no need to duplicate that
+  // handling here.
+  async function handleConfirm(careType: CareType): Promise<CreateHireResult> {
+    const response = await fetch("/api/hires", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caregiverId: caregiverUserId, careType }),
+    });
 
-    try {
-      const response = await fetch("/api/hires", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caregiverId: caregiverUserId }),
-      });
+    const data = await response.json();
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setStatus("error");
-        setMessage(
-          response.status === 409
-            ? "Você já tem uma solicitação em andamento com esse cuidador."
-            : (data.error ?? "Não foi possível enviar a solicitação.")
-        );
-        return;
-      }
-
-      setStatus("success");
-      setMessage("Solicitação enviada!");
-      router.refresh();
-    } catch {
-      setStatus("error");
-      setMessage("Erro de conexão. Tente novamente.");
+    if (!response.ok) {
+      return { ok: false, status: response.status, error: data.error };
     }
-  }
 
-  if (status === "success") {
-    return <p className="text-sm font-medium text-primary">{message}</p>;
+    router.refresh();
+    return { ok: true };
   }
 
   return (
-    <div>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={status === "loading"}
-        className={accentButtonClass}
-      >
-        {status === "loading" ? "Enviando..." : "Contratar"}
-      </button>
-      {status === "error" && message && (
-        <p className={`${errorTextClass} mt-1`}>{message}</p>
-      )}
-    </div>
+    <HireActionWithCareType
+      label="Contratar"
+      sharedCareTypes={sharedCareTypes}
+      onConfirm={handleConfirm}
+      successMessage="Solicitação enviada!"
+      conflictMessage="Você já tem uma solicitação em andamento com esse cuidador."
+      genericErrorMessage="Não foi possível enviar a solicitação."
+    />
   );
 }

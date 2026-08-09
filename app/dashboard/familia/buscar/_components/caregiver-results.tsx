@@ -1,11 +1,13 @@
 "use client";
 
+import { CareType } from "@prisma/client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { AvatarPlaceholder } from "@/app/dashboard/familia/_components/avatar-placeholder";
 import { MatchScoreRing } from "@/app/dashboard/familia/_components/match-score-ring";
 import { ContratarButton } from "@/app/dashboard/familia/_components/contratar-button";
+import { getSharedCareTypes } from "@/lib/care-types";
 import type { RankedCaregiver } from "@/lib/matching";
 
 const CARE_TYPE_LABELS: Record<string, string> = {
@@ -48,7 +50,13 @@ function sortResults(results: RankedCaregiver[], sortKey: SortKey): RankedCaregi
   return sorted;
 }
 
-export function CaregiverResults({ results }: { results: RankedCaregiver[] }) {
+export function CaregiverResults({
+  results,
+  familyNeededCareTypes,
+}: {
+  results: RankedCaregiver[];
+  familyNeededCareTypes: CareType[];
+}) {
   const [sortKey, setSortKey] = useState<SortKey>("matchScore");
   const sorted = useMemo(() => sortResults(results, sortKey), [results, sortKey]);
 
@@ -129,7 +137,13 @@ export function CaregiverResults({ results }: { results: RankedCaregiver[] }) {
             </dl>
 
             <div className="mt-5 flex justify-end">
-              <ContratarButton caregiverUserId={caregiver.userId} />
+              <ContratarButton
+                caregiverUserId={caregiver.userId}
+                sharedCareTypes={getSharedCareTypes(
+                  caregiver.careTypes,
+                  familyNeededCareTypes
+                )}
+              />
             </div>
           </div>
         ))}

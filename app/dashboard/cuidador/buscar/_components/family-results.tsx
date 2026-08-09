@@ -1,12 +1,14 @@
 "use client";
 
+import { CareType } from "@prisma/client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { CareTypeTags } from "@/app/components/care-type-tags";
 import { AvatarPlaceholder } from "@/app/dashboard/familia/_components/avatar-placeholder";
 import { MatchScoreRing } from "@/app/dashboard/familia/_components/match-score-ring";
 import { InteresseButton } from "@/app/dashboard/cuidador/_components/interesse-button";
-import { formatCareTypes } from "@/lib/care-types";
+import { getSharedCareTypes } from "@/lib/care-types";
 import type { FamilyForDisplay, RankedFamily } from "@/lib/matching";
 
 // Same length used for any other card-level bio truncation in the app
@@ -63,8 +65,10 @@ function sortResults(
 
 export function FamilyResults({
   results,
+  caregiverCareTypes,
 }: {
   results: RankedFamily<FamilyForDisplay>[];
+  caregiverCareTypes: CareType[];
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("matchScore");
   const sorted = useMemo(() => sortResults(results, sortKey), [results, sortKey]);
@@ -110,9 +114,7 @@ export function FamilyResults({
                   <p className="mt-1 text-sm text-muted">
                     {[family.city, family.state].filter(Boolean).join(", ")}
                   </p>
-                  <p className="mt-2 text-xs text-muted">
-                    Busca cuidado para {formatCareTypes(family.neededCareTypes)}
-                  </p>
+                  <CareTypeTags careTypes={family.neededCareTypes} />
                   {family.bio && (
                     <div className="mt-2">
                       <p className="text-xs font-medium uppercase text-muted">
@@ -144,7 +146,13 @@ export function FamilyResults({
             </dl>
 
             <div className="mt-5 flex justify-end">
-              <InteresseButton familyUserId={family.userId} />
+              <InteresseButton
+                familyUserId={family.userId}
+                sharedCareTypes={getSharedCareTypes(
+                  caregiverCareTypes,
+                  family.neededCareTypes
+                )}
+              />
             </div>
           </div>
         ))}

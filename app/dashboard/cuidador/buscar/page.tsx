@@ -99,7 +99,12 @@ export default async function BuscarFamiliasPage() {
           </p>
         )}
 
-        {ranked.length > 0 && <FamilyResults results={ranked} />}
+        {ranked.length > 0 && caregiverProfile && (
+          <FamilyResults
+            results={ranked}
+            caregiverCareTypes={caregiverProfile.careTypes}
+          />
+        )}
       </div>
     </main>
   );

@@ -1,21 +1,29 @@
-import { HireInitiator, HireStatus, Prisma, Role } from "@prisma/client";
+import { CareType, HireInitiator, HireStatus, Prisma, Role } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
+import { getSharedCareTypes } from "@/lib/care-types";
 import { prisma } from "@/lib/prisma";
 
 // Which id the request body carries depends on who's initiating: a family
 // reaching out names the caregiverId (their own id comes from the
-// session), a caregiver reaching out names the familyId instead.
+// session), a caregiver reaching out names the familyId instead. `careType`
+// is required on both -- which specific need this Hire is for, chosen by
+// the client from the real overlap between the two profiles (see
+// HireActionWithCareType) and re-validated against that same overlap
+// server-side below, since the client's list of options is only a UX
+// convenience, not a security boundary.
 const createHireAsFamilySchema = z.object({
   caregiverId: z.string().min(1),
+  careType: z.nativeEnum(CareType),
   message: z.string().optional(),
 });
 
 const createHireAsCaregiverSchema = z.object({
   familyId: z.string().min(1),
+  careType: z.nativeEnum(CareType),
   message: z.string().optional(),
 });
 
@@ -30,11 +38,13 @@ async function createHire({
   familyId,
   caregiverId,
   initiatedBy,
+  careType,
   message,
 }: {
   familyId: string;
   caregiverId: string;
   initiatedBy: HireInitiator;
+  careType: CareType;
   message?: string;
 }) {
   const existingActiveHire = await prisma.hire.findFirst({
@@ -58,6 +68,7 @@ async function createHire({
         familyId,
         caregiverId,
         initiatedBy,
+        careType,
         message,
         status: HireStatus.PENDING,
         // Locks this pair while active; released on any terminal
@@ -106,15 +117,51 @@ export async function POST(request: Request) {
       );
     }
 
-    const { caregiverId, message } = parsed.data;
+    const { caregiverId, careType, message } = parsed.data;
 
     const caregiverUser = await prisma.user.findUnique({
       where: { id: caregiverId },
+      include: { caregiverProfile: { select: { careTypes: true } } },
     });
 
-    if (!caregiverUser || caregiverUser.role !== Role.CAREGIVER) {
+    if (
+      !caregiverUser ||
+      caregiverUser.role !== Role.CAREGIVER ||
+      !caregiverUser.caregiverProfile
+    ) {
       return NextResponse.json(
         { error: "Cuidador não encontrado" },
+        { status: 400 }
+      );
+    }
+
+    const familyProfile = await prisma.familyProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { neededCareTypes: true },
+    });
+
+    if (!familyProfile) {
+      return NextResponse.json(
+        { error: "Complete seu perfil antes de contratar" },
+        { status: 400 }
+      );
+    }
+
+    // Re-validated here, not just trusted from the client's dropdown -- the
+    // list of options ContratarButton shows is built from the same overlap
+    // (see getSharedCareTypes), but a direct API request could send
+    // anything.
+    const sharedCareTypes = getSharedCareTypes(
+      caregiverUser.caregiverProfile.careTypes,
+      familyProfile.neededCareTypes
+    );
+
+    if (!sharedCareTypes.includes(careType)) {
+      return NextResponse.json(
+        {
+          error:
+            "Esse tipo de cuidado não é oferecido por esse cuidador ou não está entre os que você procura",
+        },
         { status: 400 }
       );
     }
@@ -123,6 +170,7 @@ export async function POST(request: Request) {
       familyId: session.user.id,
       caregiverId,
       initiatedBy: HireInitiator.FAMILY,
+      careType,
       message,
     });
   }
@@ -137,15 +185,45 @@ export async function POST(request: Request) {
       );
     }
 
-    const { familyId, message } = parsed.data;
+    const { familyId, careType, message } = parsed.data;
 
     const familyUser = await prisma.user.findUnique({
       where: { id: familyId },
+      include: { familyProfile: { select: { neededCareTypes: true } } },
     });
 
-    if (!familyUser || familyUser.role !== Role.FAMILY) {
+    if (!familyUser || familyUser.role !== Role.FAMILY || !familyUser.familyProfile) {
       return NextResponse.json(
         { error: "Família não encontrada" },
+        { status: 400 }
+      );
+    }
+
+    const caregiverProfile = await prisma.caregiverProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { careTypes: true },
+    });
+
+    if (!caregiverProfile) {
+      return NextResponse.json(
+        { error: "Complete seu perfil antes de demonstrar interesse" },
+        { status: 400 }
+      );
+    }
+
+    // Same re-validation as the family branch above, mirrored -- see that
+    // comment.
+    const sharedCareTypes = getSharedCareTypes(
+      caregiverProfile.careTypes,
+      familyUser.familyProfile.neededCareTypes
+    );
+
+    if (!sharedCareTypes.includes(careType)) {
+      return NextResponse.json(
+        {
+          error:
+            "Esse tipo de cuidado não está entre os que você atende ou os que essa família procura",
+        },
         { status: 400 }
       );
     }
@@ -154,6 +232,7 @@ export async function POST(request: Request) {
       familyId,
       caregiverId: session.user.id,
       initiatedBy: HireInitiator.CAREGIVER,
+      careType,
       message,
     });
   }

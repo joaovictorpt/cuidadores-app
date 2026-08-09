@@ -83,7 +83,10 @@ export default async function MatchPerfeitoPage() {
 
               <div className="mt-5 flex items-center justify-between">
                 <ConnectionLine matchScore={STABLE_MATCH_VISUAL_SCORE} />
-                <InteresseButton familyUserId={family.familyId} />
+                <InteresseButton
+                  familyUserId={family.familyId}
+                  sharedCareTypes={family.sharedCareTypes}
+                />
               </div>
             </div>
           ))}

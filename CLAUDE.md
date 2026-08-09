@@ -336,6 +336,13 @@ essa inconsistência uma vez.
     funcionar tanto com o `FamilyCandidate` mínimo (Gale-Shapley só precisa
     do `userId` de volta) quanto com o `FamilyForDisplay` mais rico (busca
     do cuidador, que também precisa mostrar nome/cidade/estado).
+    `getSharedCareTypes(caregiverCareTypes, familyNeededCareTypes)`
+    (`lib/care-types.ts`) é o filtro de interseção em si — extraído de três
+    cópias inline duplicadas dentro deste arquivo (`computeMatchScore`,
+    `findMatchedCaregiverForFamily`, `findMatchedFamiliesForCaregiver`) no
+    momento em que o mesmo cálculo passou a ser necessário também fora de
+    `lib/matching.ts`, pra validar `Hire.careType` em `POST /api/hires`
+    (ver "Tipo de cuidado do Hire").
   - `computeMatchScore`: soma ponderada (*weighted sum model*) dos 4
     critérios normalizados para 0-1 cada.
   - **`computePriceScore(caregiverRate, familyBudget, candidateRatesForFallback?)`**
@@ -502,8 +509,9 @@ mesmo padrão já usado pela home page, ver "Identidade do site"):
   `matchScore` real, o nome como link pro perfil (ver "Nome da outra parte
   é sempre link" abaixo), cidade/estado (nunca `address` — a família não
   tem esse campo exposto aqui, ver "Busca de famílias pelo cuidador"
-  acima), "Busca cuidado para {tipos}" (não "Atende" — ver "Correção de
-  texto: Atende vs. Busca" abaixo), o `hourlyBudget` formatado como "Até R$
+  acima), os tipos de cuidado como `CareTypeTags` (tags compactas, não mais
+  a frase "Busca cuidado para {tipos}" — ver "Card de busca de famílias:
+  tags em vez de frase redundante"), o `hourlyBudget` formatado como "Até R$
   X/h" (ou "Orçamento não informado" se ausente) e, se a família tiver
   `bio`, um bloco rotulado "O que a família procura" com o texto truncado
   em 120 caracteres (`BIO_PREVIEW_LENGTH`, local ao componente — texto
@@ -512,9 +520,10 @@ mesmo padrão já usado pela home page, ver "Identidade do site"):
   botão **`InteresseButton`**
   (`app/dashboard/cuidador/_components/interesse-button.tsx`) fica no lugar
   do `ContratarButton` do lado família — mesmo `POST /api/hires`, mas com
-  `{ familyId }` no corpo (não `{ caregiverId }`) e o texto "Tenho
-  interesse" em vez de "Contratar", já que aqui é o cuidador se oferecendo,
-  não sendo contratado. Trata 409 com a mesma mensagem clara de solicitação
+  `{ familyId, careType }` no corpo (não `{ caregiverId, careType }`) e o
+  texto "Tenho interesse" em vez de "Contratar", já que aqui é o cuidador
+  se oferecendo, não sendo contratado (ver "Tipo de cuidado do Hire" para o
+  `careType`). Trata 409 com a mesma mensagem clara de solicitação
   já em andamento, adaptada pro contexto ("...com essa família").
 - **`/dashboard/cuidador/match-perfeito`**
   (`app/dashboard/cuidador/match-perfeito/page.tsx`) espelha
@@ -632,16 +641,35 @@ em toda a base:
   `/dashboard/familia/match-recomendado` (`Atende {tipos}` explícito na
   linha de distância/compatibilidade).
 - **Telas que mostram uma família** (cuidador olhando famílias) — usam
-  **"Busca cuidado para {tipos}"**: `/dashboard/cuidador/buscar`
-  (`family-results.tsx`) e `/dashboard/cuidador/match-perfeito`, os dois
-  corrigidos nesta tarefa — antes `match-perfeito` reaproveitava
-  "Atende {tipos}" (herdado por ter sido escrito espelhando a versão
-  família do outro lado sem revisar a semântica), o que descrevia
-  incorretamente uma família como se ela "atendesse" um tipo de cuidado.
+  **"Busca cuidado para {tipos}"**: `/dashboard/cuidador/match-perfeito`,
+  corrigido nesta tarefa — antes reaproveitava "Atende {tipos}" (herdado
+  por ter sido escrito espelhando a versão família do outro lado sem
+  revisar a semântica), o que descrevia incorretamente uma família como se
+  ela "atendesse" um tipo de cuidado. `/dashboard/cuidador/buscar`
+  (`family-results.tsx`) **também** mostrava essa frase até a limpeza de
+  redundância visual (ver "Card de busca de famílias: tags em vez de
+  frase" abaixo) — hoje esse card não usa nenhum verbo, só tags, então a
+  ambiguidade Atende/Busca não se aplica mais ali.
 - Listas que só exibem os tipos sem nenhum prefixo verbal (`contratacoes`,
-  `solicitacoes`, `trabalhos-ativos`, a barra-resumo de `/buscar`) não
-  precisaram de correção — a ambiguidade só existe quando um verbo é
-  adicionado à frase.
+  `solicitacoes`, `trabalhos-ativos`, a barra-resumo de `/buscar`, e agora
+  também o card de busca de famílias) não precisam de correção — a
+  ambiguidade só existe quando um verbo é adicionado à frase.
+
+## Card de busca de famílias: tags em vez de frase redundante
+
+`/dashboard/cuidador/buscar` (`family-results.tsx`) mostrava "Busca cuidado
+para {tipos}" como frase corrida logo acima do bloco de bio ("O que a
+família procura") — como a bio frequentemente já menciona em prosa o que a
+família procura ("Buscamos cuidador(a) para nossa mãe idosa..."), a frase e
+a bio diziam a mesma coisa duas vezes, uma como texto genérico e outra como
+texto da própria família. Substituída por **`CareTypeTags`**
+(`app/components/care-type-tags.tsx`, novo) — tags compactas
+(`rounded-full bg-primary-light ... text-primary`, o mesmo par de cores já
+usado em badges de status/recomendação por toda a base, não uma cor nova
+inventada pra isso), posicionadas logo abaixo de nome/cidade e antes da
+bio. Ordem final do card: nome/cidade → tags de tipo de cuidado → bio →
+distância/orçamento → botão. Retorna `null` sem renderizar nada se a lista
+de tipos vier vazia, em vez de um container vazio.
 
 ## Nome da outra parte é sempre link para o perfil
 
@@ -799,11 +827,14 @@ nesses campos. Não há como reconstruir esses valores retroativamente, então
 
 **`POST /api/hires` aceita os dois papéis como iniciador** — o corpo da 
 requisição muda de acordo com a `session.user.role`, não com um campo 
-explícito: família manda `{ caregiverId }` (cria com `initiatedBy: FAMILY`, 
-como sempre foi), cuidador manda `{ familyId }` (cria com 
+explícito: família manda `{ caregiverId, careType }` (cria com `initiatedBy: FAMILY`, 
+como sempre foi), cuidador manda `{ familyId, careType }` (cria com 
 `initiatedBy: CAREGIVER`, novo). Os dois caminhos convergem pra uma única 
 função interna (`createHire`) que faz a checagem de solicitação ativa + o 
 `prisma.hire.create` — evita duplicar essa lógica entre os dois branches.
+`careType` é obrigatório nos dois corpos e validado contra a interseção real
+entre os dois perfis antes de chegar em `createHire` — ver "Tipo de cuidado
+do Hire" logo abaixo.
 
 **Regra de uma solicitação ativa por par família-cuidador**: não pode existir 
 mais de um `Hire` com status `PENDING` ou `ACCEPTED` entre a mesma família e o 
@@ -857,6 +888,91 @@ pessoa logada é quem propôs um `Hire` ainda `PENDING`) continuam vindo
 inteiramente de `getAvailableActions` (`lib/hire-transitions.ts`, já
 parametrizada por `initiatedBy` desde a Fase 1) — nenhuma das duas páginas
 reimplementa essa lógica, só passam `hire.initiatedBy` adiante.
+
+## Tipo de cuidado do Hire (Hire.careType)
+
+`Hire.careType CareType?` (nullable, migration `add_hire_care_type`) —
+qual necessidade específica motivou aquela contratação/interesse, quando
+tanto o cuidador quanto a família atendem/precisam mais de um tipo. Não
+retroativo: `Hire`s criados antes dessa migration ficam com `careType: null`
+para sempre, mesmo padrão de não-reconstrução já usado em
+`acceptedAt`/`completedAt`/`activeHireKey`.
+
+**Escolhido no momento de contratar/demonstrar interesse, não depois**: o
+`careType` é obrigatório em `POST /api/hires` — não existe um `Hire` sem
+tipo definido a partir de agora (só os antigos, via migration). O valor
+disponível pra escolher nunca é "qualquer um dos dois enums" — é sempre a
+**interseção real** entre `CaregiverProfile.careTypes` e
+`FamilyProfile.neededCareTypes` daquele par específico, via
+`getSharedCareTypes` (`lib/care-types.ts`, novo — extrai o filtro que antes
+vivia duplicado três vezes dentro de `lib/matching.ts`, ver "Algoritmo de
+matching").
+
+- **`HireActionWithCareType`** (`app/dashboard/_components/hire-action-with-care-type.tsx`,
+  novo): componente compartilhado usado tanto por `ContratarButton`
+  (`app/dashboard/familia/_components/`) quanto por `InteresseButton`
+  (`app/dashboard/cuidador/_components/`) — os dois já eram espelhos quase
+  idênticos um do outro (ver comentário em `interesse-button.tsx`), então a
+  lógica nova de escolha de tipo entrou uma vez só aqui, não duplicada nos
+  dois. Cada botão continua existindo como seu próprio arquivo (label,
+  mensagens de sucesso/erro/conflito e o `fetch` em si diferem — corpo
+  `{ caregiverId, careType }` vs. `{ familyId, careType }`), só delegando a
+  parte de UI/estado pro componente compartilhado via um `onConfirm(careType)`
+  passado como prop.
+  - **1 tipo em comum**: clicar já envia o `Hire` direto com esse tipo —
+    sem etapa extra, já que não há escolha real a fazer.
+  - **Mais de 1**: clicar expande inline um `role="radiogroup"` com um
+    `<input type="radio">` nativo por tipo (roving focus/seleção de graça,
+    como qualquer grupo de radio nativo) + botão "Confirmar" (desabilitado
+    até selecionar um) e "Cancelar" (volta pro botão original sem enviar
+    nada). Só o clique em "Confirmar" dispara o `POST`.
+  - **0 em comum**: não deveria acontecer com nenhum caller real de hoje
+    (toda tela que renderiza esses botões já filtrou o par por
+    `isEligiblePair`, que exige overlap — ver "Algoritmo de matching"), mas
+    o componente não assume isso: o botão fica desabilitado com uma
+    mensagem explicando por quê, em vez de tentar enviar um `POST` que o
+    servidor rejeitaria de qualquer forma.
+- **Os 4 call sites** (as duas telas de busca, as duas telas de match)
+  cada um já tinha, ou passou a ter, os dois lados dos tipos de cuidado em
+  escopo pra calcular `sharedCareTypes` e passar como prop:
+  `match-recomendado`/`match-perfeito` reaproveitam o `sharedCareTypes` que
+  `findMatchedCaregiverForFamily`/`findMatchedFamiliesForCaregiver` já
+  calculavam (ver "Match perfeito / recomendado: badge textual → linha com
+  dado real"); as duas páginas de busca (`familia/buscar`,
+  `cuidador/buscar`) passaram a repassar `neededCareTypes`/`careTypes` do
+  perfil da sessão como prop nova pros componentes de resultado
+  (`CaregiverResults`/`FamilyResults`), que chamam `getSharedCareTypes`
+  por resultado.
+- **Validação server-side em `POST /api/hires`, não só confiada no
+  dropdown do cliente**: os dois branches (família/cuidador iniciando)
+  buscam o perfil do outro lado E o próprio perfil da sessão, recomputam
+  `getSharedCareTypes` entre os dois, e retornam 400 com mensagem clara se
+  o `careType` enviado não estiver nessa lista — uma requisição direta à
+  API (fora da UI) não consegue criar um `Hire` com um tipo que o par não
+  compartilha de verdade, mesmo que a lista que a UI mostrou tivesse sido
+  manipulada ou ficado desatualizada no cliente.
+
+**Exibição**: só em `/dashboard/hires/[id]` — uma linha "Tipo de cuidado:
+{tipo}" logo abaixo do badge de direção, usando `CARE_TYPE_LABELS`
+(`lib/care-types.ts`); `Hire`s sem `careType` mostram "Tipo não
+especificado" em vez de omitir a linha (deixa claro que é dado ausente, não
+um tipo "nenhum"). **Deliberadamente fora dos cards de lista**
+(`/contratacoes`, `/solicitacoes`, `/trabalhos-ativos`): esses cards já
+mostram uma lista de tipos de cuidado com outro significado — os tipos que
+o cuidador atende no geral, ou os que a família procura no geral (ver
+"Parte 3" nesses cards) — não os desse `Hire` específico. Colocar as duas
+informações lado a lado no mesmo card ("Idosos, Crianças" do perfil geral
++ "Tipo: Idosos" desse Hire específico) confundiria mais do que ajudaria;
+quem quiser o tipo específico já tem "Ver detalhes" ali do lado.
+
+`scripts/test-hire-care-type.ts` (novo, mesmo padrão de
+`scripts/test-matching.ts`/`test-gale-shapley.ts` — dados fictícios com
+prefixo de email próprio, limpos ao final): cobre um par com só 1 tipo em
+comum, um par com múltiplos, a mesma checagem `sharedCareTypes.includes(careType)`
+que o servidor roda contra um tipo fora da interseção, um `Hire` real
+criado com `careType` e recarregado do banco, e um `Hire` criado sem
+`careType` (simulando uma linha pré-migration) pra confirmar que fica
+`null` sem quebrar nada.
 
 ## Sistema de Review
 

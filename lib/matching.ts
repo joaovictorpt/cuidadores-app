@@ -1,5 +1,6 @@
 import { CareType, CaregiverProfile, FamilyProfile } from "@prisma/client";
 
+import { getSharedCareTypes } from "@/lib/care-types";
 import { stableMatching } from "@/lib/gale-shapley";
 import { haversineDistanceKm } from "@/lib/haversine";
 import { matchingConfig } from "@/lib/matching-config";
@@ -209,12 +210,13 @@ export function computeMatchScore(
     1 - distanceKm / matchingConfig.maxDistanceKm
   );
 
-  const sharedCareTypes = caregiver.careTypes.filter((type) =>
-    familyProfile.neededCareTypes.includes(type)
+  const sharedCareTypeCount = getSharedCareTypes(
+    caregiver.careTypes,
+    familyProfile.neededCareTypes
   ).length;
   const careTypeScore =
     familyProfile.neededCareTypes.length > 0
-      ? sharedCareTypes / familyProfile.neededCareTypes.length
+      ? sharedCareTypeCount / familyProfile.neededCareTypes.length
       : 0;
 
   const ratingScore =
@@ -560,9 +562,7 @@ export async function findMatchedCaregiverForFamily(
 
   const sharedCareTypes =
     familyProfile && caregiverProfile
-      ? caregiverProfile.careTypes.filter((type) =>
-          familyProfile.neededCareTypes.includes(type)
-        )
+      ? getSharedCareTypes(caregiverProfile.careTypes, familyProfile.neededCareTypes)
       : [];
 
   return { caregiverUserId: matchedCaregiverUserId, distanceKm, sharedCareTypes };
@@ -620,9 +620,7 @@ export async function findMatchedFamiliesForCaregiver(
     );
 
     const sharedCareTypes = caregiverProfile
-      ? profile.neededCareTypes.filter((type) =>
-          caregiverProfile.careTypes.includes(type)
-        )
+      ? getSharedCareTypes(caregiverProfile.careTypes, profile.neededCareTypes)
       : [];
 
     return {

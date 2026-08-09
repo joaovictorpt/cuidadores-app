@@ -115,7 +115,10 @@ export default async function MatchRecomendadoPage() {
 
             <div className="mt-5 flex items-center justify-between">
               <ConnectionLine matchScore={STABLE_MATCH_VISUAL_SCORE} />
-              <ContratarButton caregiverUserId={matchedCaregiver.caregiverUserId} />
+              <ContratarButton
+                caregiverUserId={matchedCaregiver.caregiverUserId}
+                sharedCareTypes={matchedCaregiver.sharedCareTypes}
+              />
             </div>
           </div>
         )}

@@ -167,6 +167,14 @@ model Hire {
   startDate   DateTime?
   endDate     DateTime?
 
+  // Which specific need this Hire is for, chosen from the real overlap
+  // between the two profiles' care types at creation time (see
+  // POST /api/hires). Nullable, not backfilled -- Hires created before this
+  // field existed simply show "Tipo não especificado" (see
+  // /dashboard/hires/[id]), same non-retroactive pattern already used for
+  // acceptedAt/completedAt above.
+  careType    CareType?
+
   // Real timestamps of the two state-machine transitions that matter for
   // display (PENDING -> ACCEPTED, ACCEPTED -> COMPLETED), set by
   // PATCH /api/hires/[id] -- never backfillable, so rows created before

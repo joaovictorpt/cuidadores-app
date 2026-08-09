@@ -7,6 +7,7 @@ import { StarRating } from "@/app/components/star-rating";
 import { BackLink } from "@/app/dashboard/_components/back-link";
 import { CopyPhoneButton } from "@/app/dashboard/hires/[id]/_components/copy-phone-button";
 import { authOptions } from "@/lib/auth";
+import { CARE_TYPE_LABELS } from "@/lib/care-types";
 import { formatDuration } from "@/lib/duration";
 import { getHireDirectionLabel, HIRE_STATUS_LABELS } from "@/lib/hire-labels";
 import { buildWhatsAppUrl, formatPhoneForDisplay } from "@/lib/phone";
@@ -106,6 +107,12 @@ export default async function HireDetailPage({
               <span className="mt-1 inline-block rounded-full border border-muted/30 px-2 py-0.5 text-xs text-muted">
                 {getHireDirectionLabel(hire.initiatedBy, session.user.role)}
               </span>
+              <p className="mt-2 text-sm text-ink/80">
+                Tipo de cuidado:{" "}
+                {hire.careType
+                  ? (CARE_TYPE_LABELS[hire.careType] ?? hire.careType)
+                  : "Tipo não especificado"}
+              </p>
             </div>
             <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 text-sm font-medium text-primary">
               {HIRE_STATUS_LABELS[hire.status]}
