@@ -166,6 +166,14 @@ model Hire {
   startDate   DateTime?
   endDate     DateTime?
 
+  // Real timestamps of the two state-machine transitions that matter for
+  // display (PENDING -> ACCEPTED, ACCEPTED -> COMPLETED), set by
+  // PATCH /api/hires/[id] -- never backfillable, so rows created before
+  // this field existed simply keep it null (see /dashboard/hires/[id],
+  // which shows "Duração não disponível" instead of guessing).
+  acceptedAt  DateTime?
+  completedAt DateTime?
+
   // Set to "<familyId>:<caregiverId>" while status is PENDING or ACCEPTED,
   // and cleared back to null on any terminal transition (REJECTED,
   // COMPLETED, CANCELLED). Postgres unique indexes treat multiple NULLs as

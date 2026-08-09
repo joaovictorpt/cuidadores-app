@@ -82,6 +82,11 @@ export async function PATCH(
       activeHireKey: TERMINAL_HIRE_STATUSES.includes(nextStatus)
         ? null
         : hire.activeHireKey,
+      // Real transition timestamps, used by /dashboard/hires/[id] to show
+      // the service duration -- only these two transitions matter for
+      // that, every other transition leaves both fields untouched.
+      ...(nextStatus === HireStatus.ACCEPTED ? { acceptedAt: new Date() } : {}),
+      ...(nextStatus === HireStatus.COMPLETED ? { completedAt: new Date() } : {}),
     },
   });
 

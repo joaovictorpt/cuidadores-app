@@ -522,6 +522,15 @@ que não variam — compartilhando o mesmo objeto `ACCEPTED_TRANSITIONS` em
 vez de duplicado, pra não divergirem por acidente); `isValidHireTransition` 
 e `getAvailableActions` ganharam um parâmetro `initiatedBy` a mais.
 
+**Timestamps reais de transição**: `Hire.acceptedAt`/`Hire.completedAt`
+(`DateTime?`, migration `add_hire_accepted_completed_at`) registram o
+momento exato em que o `PATCH /api/hires/[id]` move o `Hire` para
+`ACCEPTED`/`COMPLETED` respectivamente — nenhuma outra transição toca
+nesses campos. Não há como reconstruir esses valores retroativamente, então
+`Hire`s criados antes dessa mudança ficam com os dois `null` para sempre;
+`/dashboard/hires/[id]` (abaixo) trata isso explicitamente, mostrando
+"Duração não disponível" em vez de calcular com dado ausente.
+
 **`POST /api/hires` aceita os dois papéis como iniciador** — o corpo da 
 requisição muda de acordo com a `session.user.role`, não com um campo 
 explícito: família manda `{ caregiverId }` (cria com `initiatedBy: FAMILY`, 
@@ -629,6 +638,85 @@ quando o mouse sai do grupo. Colorido com `fill="currentColor"` +
 `ConnectionLine`/`MatchScoreRing`, não a utility `fill-primary` do
 Tailwind (nunca testada em produção neste projeto).
 
+**Modo `readOnly`**: usado para mostrar a nota de uma review já existente
+(a de outra pessoa, nunca editável ali) — em
+`/dashboard/cuidador/avaliacoes` e em `/dashboard/hires/[id]`. `StarRating`
+é tipado como união discriminada (`onChange` obrigatório quando
+`readOnly` não é `true`; ausente quando é) pra impedir na compilação passar
+`onChange` sem sentido num uso somente-leitura. Internamente isso vira dois
+componentes internos separados (`InteractiveStarRating` /
+`ReadOnlyStarRating`), não um componente só com um `if (readOnly) return`
+antes das chamadas de `useState`/`useRef` — isso violaria as Rules of
+Hooks (hooks passariam a ser condicionais). O modo somente-leitura também
+troca a semântica ARIA: em vez de `role="radiogroup"` com radios
+desabilitados (o que sugeriria a um leitor de tela que há um input ali pra
+operar), é um `role="img"` estático com `aria-label` tipo "Avaliação: 4 de
+5 estrelas".
+
+## Tela de avaliações do cuidador
+
+`/dashboard/cuidador/avaliacoes` (`app/dashboard/cuidador/avaliacoes/page.tsx`):
+lista todas as `Review` onde `targetId` é o cuidador logado (`prisma.review.findMany`
+com `include: { author: { select: { name: true } } }`, ordenadas por
+`createdAt` decrescente). Para cada uma: nome de quem avaliou, nota
+(`StarRating readOnly`), comentário (ou "Sem comentário" se vazio/null,
+nunca deixado em branco silenciosamente) e tempo relativo
+(`formatRelativeTime`, mesmo padrão de `metaTextClass` já usado nas listas
+de `Hire`). Subtítulo mostra a média + total via `calculateAverageRating`
+(mesma função já usada no dashboard do cuidador) — como `average` é `null`
+sem nenhuma review, a mesma condição já cobre a mensagem clara pedida
+("Você ainda não recebeu avaliações."), sem precisar de um segundo check
+`reviews.length === 0` redundante. O card "Sua avaliação" no dashboard do
+cuidador (`app/dashboard/cuidador/page.tsx`) virou um link pra essa página
+(era só um `<div>`, mesmo padrão hover dos outros cards do grid).
+
+## Tela de detalhe de um Hire (compartilhada)
+
+`/dashboard/hires/[id]` (`app/dashboard/hires/[id]/page.tsx`) é a única
+página do app que não vive sob `/dashboard/familia/*` nem
+`/dashboard/cuidador/*` — faz sentido, já que o mesmo `Hire` pertence aos
+dois lados, e ambos precisam poder abrir o mesmo detalhe (`BackLink` volta
+pra `/dashboard/familia/contratacoes` ou `/dashboard/cuidador/solicitacoes`
+dependendo de qual lado é o usuário logado). Linkada como "Ver detalhes"
+em cada card das duas listas de `Hire` — deliberadamente um link dentro do
+card, não o card inteiro clicável, já que o card já tem botões de ação
+(Aceitar/Recusar/Cancelar) que não podem ficar aninhados dentro de outro
+elemento clicável (`<a>` dentro de `<a>`/`<button>` é HTML inválido e
+quebra o comportamento de clique).
+
+**Verificação de participante — 404 unificado, não 403 separado**: a
+página busca o `Hire` pelo `id` da URL e confirma que `familyId` ou
+`caregiverId` bate com `session.user.id`; se o `Hire` não existir OU o
+usuário logado não for participante, os dois casos caem no mesmo
+`notFound()` do Next.js (`next/navigation`) — ao contrário das rotas de
+API (que retornam 401/403/404 distintos em JSON), aqui um 403 dedicado
+vazaria pra um estranho logado que aquele `id` de `Hire` existe, mesmo que
+ele não veja o conteúdo. Colapsar os dois em 404 evita esse vazamento de
+existência, um padrão comum em apps que levam a sério não revelar
+recursos que não pertencem a quem pergunta.
+
+Conteúdo mostrado: nome da outra parte (`caregiver` se o logado é a
+família, `family` caso contrário), status atual, o mesmo badge de direção
+de `getHireDirectionLabel` já usado nas listas, mensagem original
+(`Hire.message`, se houver), linha do tempo (criado em / aceito em / concluído
+em — cada uma com data absoluta *e* relativa, via um `formatTimelineEntry`
+local que combina `toLocaleString("pt-BR")` com `formatRelativeTime`), e a
+`Review` associada (se existir: nota via `StarRating readOnly`, comentário,
+nome de quem avaliou via `review.author`, não assumido como sempre sendo a
+família mesmo sabendo que hoje só a família avalia — ver "Sistema de
+Review").
+
+**Duração do serviço**: `lib/duration.ts` (`formatDuration`) converte
+`completedAt - acceptedAt` (em ms) numa frase de unidade única ("3 dias",
+"5 horas") — mesma lógica de "maior unidade aplicável" de
+`lib/relative-time.ts`, mas sem o prefixo "há" (aqui é a duração de um
+intervalo fixo, não "quanto tempo atrás") e arredondando em vez de
+truncando (o intervalo já é fixo quando calculado, então arredondar pro
+mais próximo é mais preciso que sempre truncar pra baixo). Se
+`acceptedAt` ou `completedAt` estiver ausente (`Hire` antigo de antes da
+migration, ou ainda não chegou nesse ponto do fluxo), mostra "Duração não
+disponível" em vez de tentar calcular com dado faltando.
+
 ## Dashboards
 
 `app/dashboard/familia/page.tsx` e `app/dashboard/cuidador/page.tsx` eram só
@@ -671,9 +759,10 @@ Prisma direto ali, junto com a sessão.
     duplicado em `GET /api/reviews` e em `lib/matching.ts`
     (`toCaregiverForMatching`); os dois agora importam a mesma função em vez
     de recalcular. Sem nenhuma review, mostra "Sem avaliações ainda" em vez
-    de "0" (que pareceria uma nota real, não ausência de dado). Este card
-    não é um link — não existe uma página dedicada de "minhas avaliações"
-    hoje para apontar.
+    de "0" (que pareceria uma nota real, não ausência de dado). O card é um
+    link para `/dashboard/cuidador/avaliacoes` (ver "Tela de avaliações do
+    cuidador" abaixo) — antes não linkava a lugar nenhum porque essa
+    página não existia.
   - Card "Documentos": `prisma.document.count` por `caregiverId` do
     `CaregiverProfile` da sessão. Com zero documentos, o texto é um convite
     ("envie para começar a ser verificado(a)"), não um aviso de erro — só o

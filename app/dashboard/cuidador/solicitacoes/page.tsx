@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BackLink } from "@/app/dashboard/_components/back-link";
@@ -75,6 +76,12 @@ export default async function SolicitacoesPage() {
                         {formatRelativeTime(hire.createdAt)}
                       </span>
                     </div>
+                    <Link
+                      href={`/dashboard/hires/${hire.id}`}
+                      className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+                    >
+                      Ver detalhes
+                    </Link>
                   </div>
                   <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 text-sm font-medium text-primary">
                     {HIRE_STATUS_LABELS[hire.status]}

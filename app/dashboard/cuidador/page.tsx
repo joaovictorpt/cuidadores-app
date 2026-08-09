@@ -76,7 +76,10 @@ export default async function DashboardCuidadorPage() {
             </p>
           </Link>
 
-          <div className={contentCardClass}>
+          <Link
+            href="/dashboard/cuidador/avaliacoes"
+            className={`${contentCardClass} block transition hover:border-primary motion-reduce:transition-none`}
+          >
             <h2 className="font-display text-lg font-semibold text-ink">
               Sua avaliação
             </h2>
@@ -85,7 +88,7 @@ export default async function DashboardCuidadorPage() {
                 ? `${averageRating.toFixed(1)}/5 (${reviewCount} avaliação${reviewCount === 1 ? "" : "ões"})`
                 : "Sem avaliações ainda"}
             </p>
-          </div>
+          </Link>
 
           <Link
             href="/dashboard/cuidador/documentos"

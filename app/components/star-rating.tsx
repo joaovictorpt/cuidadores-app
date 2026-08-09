@@ -5,11 +5,34 @@ import { useRef, useState, type KeyboardEvent } from "react";
 
 const STAR_VALUES = [1, 2, 3, 4, 5];
 
-type StarRatingProps = {
-  value: number;
-  onChange: (value: number) => void;
-  label?: string;
-};
+// Discriminated union so the compiler enforces the pairing: interactive
+// usage must pass `onChange`, read-only usage (e.g. displaying someone
+// else's past review) must not -- there's nothing to commit a change to.
+type StarRatingProps =
+  | { value: number; onChange: (value: number) => void; label?: string; readOnly?: false }
+  | { value: number; onChange?: undefined; label?: string; readOnly: true };
+
+// Static, non-interactive readout -- role="img" (not role="radiogroup"
+// with disabled radios), since that would tell a screen reader there's an
+// input here to operate, which there isn't.
+function ReadOnlyStarRating({ value, label = "Avaliação" }: { value: number; label?: string }) {
+  return (
+    <div
+      role="img"
+      aria-label={`${label}: ${value} de 5 estrelas`}
+      className="flex items-center gap-1"
+    >
+      {STAR_VALUES.map((starValue) => (
+        <Star
+          key={starValue}
+          aria-hidden="true"
+          fill={starValue <= value ? "currentColor" : "none"}
+          className={`h-5 w-5 ${starValue <= value ? "text-primary" : "text-muted/40"}`}
+        />
+      ))}
+    </div>
+  );
+}
 
 // Accessible 5-star rating input, following the ARIA "radio group" pattern
 // (https://www.w3.org/WAI/ARIA/apg/patterns/radio/): each star is a
@@ -21,7 +44,15 @@ type StarRatingProps = {
 // a click or arrow key) is what persists once the pointer leaves, same
 // mental model as fill="currentColor" + `stroke`/`fill` icon coloring
 // already used by ConnectionLine/MatchScoreRing elsewhere in the app.
-export function StarRating({ value, onChange, label = "Avaliação" }: StarRatingProps) {
+function InteractiveStarRating({
+  value,
+  onChange,
+  label = "Avaliação",
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  label?: string;
+}) {
   const [hoverValue, setHoverValue] = useState<number | null>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -79,5 +110,20 @@ export function StarRating({ value, onChange, label = "Avaliação" }: StarRatin
         );
       })}
     </div>
+  );
+}
+
+// Dispatches on `readOnly` -- deliberately NOT a single component branching
+// internally on a hook-free early return, since InteractiveStarRating's
+// useState/useRef would then be called conditionally (a Rules-of-Hooks
+// violation). Each branch is its own component instead, so whichever one
+// renders always calls its own hooks unconditionally.
+export function StarRating(props: StarRatingProps) {
+  if (props.readOnly) {
+    return <ReadOnlyStarRating value={props.value} label={props.label} />;
+  }
+
+  return (
+    <InteractiveStarRating value={props.value} onChange={props.onChange} label={props.label} />
   );
 }
