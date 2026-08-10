@@ -1699,9 +1699,13 @@ na branch `main` dispara um deploy automático de produção, sem passo manual.
 
 ## Dados de demonstração
 
-`scripts/seed-demo.ts` gera dados fictícios (5 cuidadores, 3 famílias,
+`scripts/seed-demo.ts` gera dados fictícios (**15 cuidadores, 15 famílias**,
 contratações e avaliações) para usar ao vivo na apresentação do TCC. Roda com
-`npm run seed:demo`.
+`npm run seed:demo`. Escala original era 5 cuidadores/3 famílias — aumentada
+para 15/15 para que busca e matching tenham volume suficiente pra produzir
+resultados interessantes (várias páginas de resultado, scores/distâncias
+variados, Gale-Shapley com rejeições/deslocamentos reais em vez de um caso
+trivial de poucos pares).
 
 - **Idempotente**: apaga todo dado de demonstração anterior antes de inserir
   qualquer coisa (identificado pelo domínio de email exclusivo
@@ -1710,10 +1714,12 @@ contratações e avaliações) para usar ao vivo na apresentação do TCC. Roda 
 - **Roda contra o mesmo banco Supabase de produção** (não há staging
   separado — mesma decisão já registrada na seção "Deploy (Vercel)"). Por
   isso o script nunca deve ser executado sem confirmação explícita antes.
-- Endereços reais na região metropolitana de Goiânia (Goiânia, Aparecida de
-  Goiânia, Trindade, Senador Canedo), geocodificados de verdade via
-  `lib/geocoding.ts` — não há latitude/longitude hardcoded — para que busca e
-  matching produzam resultados coerentes na demo.
+- Endereços reais na região metropolitana de Goiânia, espalhados por **seis
+  cidades** — Goiânia, Aparecida de Goiânia, Trindade e Senador Canedo (já
+  usadas na escala original 5/3) mais **Goianira** e **Bela Vista de
+  Goiás** (adicionadas na expansão pra 15/15, pra variar ainda mais a
+  distância nos resultados de busca) — geocodificados de verdade via
+  `lib/geocoding.ts`, não há latitude/longitude hardcoded.
 - Todos os usuários demo (família e cuidador) compartilham a senha
   `Demo@2026`, hasheada com bcrypt como qualquer outro usuário. Ao final da
   execução, o script imprime uma tabela com email/senha/role de cada
@@ -1726,41 +1732,50 @@ contratações e avaliações) para usar ao vivo na apresentação do TCC. Roda 
   executa seu próprio `main()` quando rodado diretamente (`require.main ===
   module`), então importar `cleanup` dali não dispara um seed completo como
   efeito colateral.
-- **`hourlyBudget` em 2 das 3 `FamilySeed`, uma acima e uma abaixo do que os
-  cuidadores cobram** — família1 (Pereira, precisa `ELDERLY`) tem
-  `hourlyBudget: 20`, abaixo dos três cuidadores que atendem `ELDERLY`
-  (cuidador1 R$25, cuidador3 R$35, cuidador4 R$45): todos aparecem "acima do
-  orçamento" na camada 1 de `computePriceScore`. Família2 (Souza, precisa
-  `CHILD`) tem `hourlyBudget: 70`, acima dos quatro cuidadores que atendem
-  `CHILD` (R$20 a R$60): todos "dentro do orçamento". Família3 (Ribeiro)
-  continua **sem** `hourlyBudget`, de propósito — é quem exercita a
-  camada 2/3 de fallback (normalização relativa ou neutro, nunca a
-  comparação real de orçamento). O caminho "com orçamento" também continua
-  coberto isoladamente pelo cenário `seedBudgetScenario` em
+- **`careTypes`/`neededCareTypes` variados entre os 15+15**: mistura de
+  combinações de 1, 2 e os 3 tipos (`CareType`) tanto do lado cuidador
+  quanto família, pra que a interseção usada por `isEligiblePair`/
+  `computeMatchScore` produza resultados desiguais entre os pares em vez de
+  todo mundo compatível com todo mundo.
+- **`hourlyRate` (cuidadores) espalhado entre R$18 e R$70** e
+  **`experienceYears` entre 0 e 20 anos** — cobrindo os extremos da faixa
+  pedida, não só o miolo, pra que `computeMatchScore`/`computePriceScore`
+  tenham variação real de sinal entre os candidatos.
+- **`hourlyBudget` em 7 das 15 `FamilySeed`** (as outras 8 ficam sem,
+  exercitando a camada 2/3 de fallback de `computePriceScore` — normalização
+  relativa ou neutro, nunca a comparação real de orçamento): valores
+  espalhados de R$15 a R$80, deliberadamente cobrindo tanto orçamentos
+  baixos (abaixo do que a maioria dos cuidadores compatíveis cobra) quanto
+  altos (acima). O caminho "com orçamento" também continua coberto
+  isoladamente pelo cenário `seedBudgetScenario` em
   `scripts/test-matching.ts` (família fictícia própria, criada e limpa à
   parte do dataset de demo).
-- **`visibleToCaregivers: false` em família2 (Souza)** — demonstra o
-  controle de visibilidade da família funcionando: ela some da busca e do
-  match perfeito de qualquer cuidador (confirmado manualmente: cuidador3,
-  que atende `CHILD` e ficaria elegível por distância/tipo, não vê Souza na
-  busca), mas continua enxergando cuidadores normalmente na própria busca
-  dela.
-- **`visibleToFamilies: false` em cuidador5 (Elisa)** — o espelho do ponto
-  acima do outro lado: some da busca/match de qualquer família (confirmado
-  com família3, que precisa `SPECIAL_NEEDS`+`CHILD` e ficaria elegível para
-  Elisa por tipo/distância), mas continua enxergando famílias normalmente na
-  própria busca dela.
-- **`availabilityStatus` variado entre os 5 cuidadores**, cobrindo os três
-  valores do enum: `AVAILABLE` (cuidador1 Ana Paula, cuidador3 Camila),
-  `BUSY` (cuidador2 Bruno, cuidador4 Diego) e `UNAVAILABLE` (cuidador5
-  Elisa — que também está com `visibleToFamilies: false`, uma combinação
-  narrativamente coerente: indisponível *e* fora de busca).
-- **`Hire.careType` preenchido nos 4 `HIRE_SEEDS`**, cada um com um valor
-  real dentro da interseção de tipos entre a família e o cuidador daquele
-  par específico (mesma regra que `POST /api/hires` valida no servidor —
-  ver "Tipo de cuidado do Hire"): família1×cuidador1 e família1×cuidador4
-  usam `ELDERLY` (única opção no primeiro par; escolha entre três no
-  segundo), família2×cuidador2 usa `CHILD` (única opção), família3×
-  cuidador4 usa `SPECIAL_NEEDS` (escolha entre três, alinhada com "sobrinho
-  com necessidades especiais" na bio de família3). Nenhum `Hire` de demo
-  fica mais com `careType: null`.
+- **`visibleToCaregivers: false` em 3 das 15 famílias** (Souza, Correia,
+  Peixoto) — demonstra o controle de visibilidade da família funcionando:
+  cada uma some da busca e do match perfeito de qualquer cuidador, mas
+  continua enxergando cuidadores normalmente na própria busca dela.
+- **`visibleToFamilies: false` em 3 dos 15 cuidadores** (Elisa, Eduardo,
+  Camilla) — o espelho do ponto acima do outro lado: cada um some da
+  busca/match de qualquer família, mas continua enxergando famílias
+  normalmente na própria busca dele. Elisa e Camilla também estão
+  `UNAVAILABLE`, uma combinação narrativamente coerente (indisponível *e*
+  fora de busca).
+- **`availabilityStatus` variado entre os 15 cuidadores**, cobrindo bem os
+  três valores do enum (não concentrado em `AVAILABLE`): 6 `AVAILABLE`, 5
+  `BUSY`, 4 `UNAVAILABLE`.
+- **`HIRE_SEEDS` expandido de 4 para 8 registros**, cobrindo agora os 5
+  status possíveis (os 4 originais já tinham `PENDING`/`ACCEPTED`/
+  `COMPLETED`; os 4 novos acrescentam o primeiro `REJECTED` e o primeiro
+  `CANCELLED` do dataset de demo) e variando `initiatedBy` entre `FAMILY` e
+  `CAREGIVER`. **Deliberadamente concentrado** nas 3 famílias e nos 3
+  cuidadores originais da escala 5/3 (Pereira/Souza/Ribeiro e Ana Paula/
+  Bruno/Diego) em vez de espalhado pelos 15+15 — essas 6 contas viram
+  "vitrine" com 2-3 `Hire`s cada (ex.: Pereira e Diego aparecem em 3
+  cada, incluindo uma segunda interação **Pereira×Ana Paula** que já tinha
+  sido `REJECTED` antes da que terminou `COMPLETED` — válido porque os
+  dois são status terminais, então `activeHireKey` fica `null` nos dois e a
+  constraint `UNIQUE` nunca conflita), enquanto os outros 12 famílias e 12
+  cuidadores adicionados na expansão não têm nenhum `Hire` — eles existem
+  pra povoar busca/matching, não as telas de contratações/solicitações.
+  Todos os 8 continuam com `careType` real dentro da interseção do par (ver
+  "Tipo de cuidado do Hire") e nenhum fica com `careType: null`.

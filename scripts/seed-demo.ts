@@ -1,4 +1,10 @@
-import { CareType, CaregiverAvailability, HireStatus, Role } from "@prisma/client";
+import {
+  CareType,
+  CaregiverAvailability,
+  HireInitiator,
+  HireStatus,
+  Role,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 import { buildGeocodeQuery, geocodeAddress, GeocodeResult } from "@/lib/geocoding";
@@ -125,7 +131,11 @@ type FamilySeed = {
 // happen to live in the same city, and that it doesn't confuse "Centro" or
 // "Setor X" with a same-named neighborhood in another state -- the queries
 // built in seedCaregivers/seedFamilies below also append "Goiás, Brasil"
-// explicitly for the same reason.
+// explicitly for the same reason. 15 caregivers / 15 families spread across
+// six metro cities (Goiânia, Aparecida de Goiânia, Trindade, Senador
+// Canedo, plus Goianira and Bela Vista de Goiás added when the dataset grew
+// from 5/3 to 15/15) so distance actually varies meaningfully across search
+// results instead of everyone sitting a few km apart.
 const CAREGIVER_SEEDS: CaregiverSeed[] = [
   {
     email: `cuidador1${EMAIL_DOMAIN}`,
@@ -200,6 +210,153 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
     // family search/matching -- see CLAUDE.md "Dados de demonstração".
     visibleToFamilies: false,
   },
+  {
+    email: `cuidador6${EMAIL_DOMAIN}`,
+    name: "Rafael Souza Martins",
+    phone: "(62) 99666-7788",
+    street: "Rua Central, 45",
+    neighborhood: "Centro",
+    city: "Goianira",
+    state: "GO",
+    bio: "Iniciando na área de cuidados, atendo idosos com muita dedicação e paciência.",
+    careTypes: [CareType.ELDERLY],
+    hourlyRate: 18,
+    experienceYears: 0,
+    availabilityStatus: CaregiverAvailability.AVAILABLE,
+  },
+  {
+    email: `cuidador7${EMAIL_DOMAIN}`,
+    name: "Juliana Alves Barbosa",
+    phone: "(62) 99777-8899",
+    street: "Rua 90, 220",
+    neighborhood: "Setor Oeste",
+    city: "Goiânia",
+    state: "GO",
+    bio: "Cuidadora especializada em crianças e pessoas com necessidades especiais, com formação em terapia ocupacional.",
+    careTypes: [CareType.CHILD, CareType.SPECIAL_NEEDS],
+    hourlyRate: 42,
+    experienceYears: 5,
+    availabilityStatus: CaregiverAvailability.BUSY,
+  },
+  {
+    email: `cuidador8${EMAIL_DOMAIN}`,
+    name: "Marcos Vinícius Pereira",
+    phone: "(62) 99888-9900",
+    street: "Rua das Acácias, 310",
+    neighborhood: "Cidade Livre",
+    city: "Aparecida de Goiânia",
+    state: "GO",
+    bio: "20 anos de experiência atendendo idosos, crianças e pessoas com necessidades especiais em tempo integral.",
+    careTypes: [CareType.ELDERLY, CareType.CHILD, CareType.SPECIAL_NEEDS],
+    hourlyRate: 70,
+    experienceYears: 20,
+    availabilityStatus: CaregiverAvailability.AVAILABLE,
+  },
+  {
+    email: `cuidador9${EMAIL_DOMAIN}`,
+    name: "Fernanda Cristina Lopes",
+    phone: "(62) 99000-1122",
+    street: "Rua das Palmeiras, 88",
+    neighborhood: "Residencial Trindade",
+    city: "Trindade",
+    state: "GO",
+    bio: "Especialista em necessidades especiais, com formação em fisioterapia e acompanhamento terapêutico.",
+    careTypes: [CareType.SPECIAL_NEEDS],
+    hourlyRate: 30,
+    experienceYears: 3,
+    availabilityStatus: CaregiverAvailability.UNAVAILABLE,
+  },
+  {
+    email: `cuidador10${EMAIL_DOMAIN}`,
+    name: "Thiago Henrique Rocha",
+    phone: "(62) 99123-4567",
+    street: "Rua Goiás, 502",
+    neighborhood: "Vila São José",
+    city: "Senador Canedo",
+    state: "GO",
+    bio: "Atendo idosos e crianças com flexibilidade de horário e experiência em rotina domiciliar.",
+    careTypes: [CareType.ELDERLY, CareType.CHILD],
+    hourlyRate: 28,
+    experienceYears: 4,
+    availabilityStatus: CaregiverAvailability.AVAILABLE,
+  },
+  {
+    email: `cuidador11${EMAIL_DOMAIN}`,
+    name: "Patrícia Gomes Nascimento",
+    phone: "(62) 99234-5678",
+    street: "Rua Principal, 12",
+    neighborhood: "Centro",
+    city: "Bela Vista de Goiás",
+    state: "GO",
+    bio: "Cuidadora infantil recém-formada, atenciosa e disponível para período integral.",
+    careTypes: [CareType.CHILD],
+    hourlyRate: 19,
+    experienceYears: 0,
+    availabilityStatus: CaregiverAvailability.BUSY,
+  },
+  {
+    email: `cuidador12${EMAIL_DOMAIN}`,
+    name: "Rodrigo Teixeira Vieira",
+    phone: "(62) 99345-6789",
+    street: "Rua 15, 730",
+    neighborhood: "Setor Sul",
+    city: "Goiânia",
+    state: "GO",
+    bio: "17 anos de experiência com idosos, especializado em cuidados paliativos e mobilidade reduzida.",
+    careTypes: [CareType.ELDERLY],
+    hourlyRate: 55,
+    experienceYears: 17,
+    availabilityStatus: CaregiverAvailability.UNAVAILABLE,
+  },
+  {
+    email: `cuidador13${EMAIL_DOMAIN}`,
+    name: "Larissa Cunha Ramos",
+    phone: "(62) 99456-7890",
+    street: "Avenida das Flores, 145",
+    neighborhood: "Buriti Sereno",
+    city: "Aparecida de Goiânia",
+    state: "GO",
+    bio: "Atendo idosos e pessoas com necessidades especiais, com curso técnico em enfermagem.",
+    careTypes: [CareType.ELDERLY, CareType.SPECIAL_NEEDS],
+    hourlyRate: 38,
+    experienceYears: 9,
+    availabilityStatus: CaregiverAvailability.AVAILABLE,
+  },
+  {
+    email: `cuidador14${EMAIL_DOMAIN}`,
+    name: "Eduardo Nunes Farias",
+    phone: "(62) 99567-8901",
+    street: "Rua dos Ipês, 60",
+    neighborhood: "Residencial Buena Vista",
+    city: "Goianira",
+    state: "GO",
+    bio: "14 anos cuidando de idosos, crianças e pessoas com necessidades especiais, com muita experiência prática.",
+    careTypes: [CareType.CHILD, CareType.ELDERLY, CareType.SPECIAL_NEEDS],
+    hourlyRate: 65,
+    experienceYears: 14,
+    availabilityStatus: CaregiverAvailability.BUSY,
+    // Second caregiver (besides cuidador5/Elisa) demonstrating
+    // visibleToFamilies -- see CLAUDE.md "Dados de demonstração".
+    visibleToFamilies: false,
+  },
+  {
+    email: `cuidador15${EMAIL_DOMAIN}`,
+    name: "Camilla Duarte Moreira",
+    phone: "(62) 99678-9012",
+    street: "Rua do Comércio, 25",
+    neighborhood: "Village Terrasse",
+    city: "Trindade",
+    state: "GO",
+    bio: "Cuidadora infantil com experiência em rotina escolar e atividades recreativas.",
+    careTypes: [CareType.CHILD],
+    hourlyRate: 22,
+    experienceYears: 2,
+    availabilityStatus: CaregiverAvailability.UNAVAILABLE,
+    // Third caregiver demonstrating visibleToFamilies (see CLAUDE.md
+    // "Dados de demonstração") -- combined with UNAVAILABLE above, same
+    // "indisponível e fora de busca" narrative already used for cuidador5.
+    visibleToFamilies: false,
+  },
 ];
 
 const FAMILY_SEEDS: FamilySeed[] = [
@@ -244,12 +401,150 @@ const FAMILY_SEEDS: FamilySeed[] = [
     bio: "Família busca cuidador(a) para atender avó idosa e sobrinho com necessidades especiais.",
     neededCareTypes: [CareType.ELDERLY, CareType.CHILD, CareType.SPECIAL_NEEDS],
   },
+  {
+    email: `familia4${EMAIL_DOMAIN}`,
+    name: "Família Almeida",
+    phone: "(62) 98444-5511",
+    address: "Rua 8, 300 - Setor Central",
+    city: "Goiânia",
+    state: "GO",
+    bio: "Cuidamos do nosso pai idoso, que precisa de acompanhamento diário.",
+    neededCareTypes: [CareType.ELDERLY],
+  },
+  {
+    email: `familia5${EMAIL_DOMAIN}`,
+    name: "Família Carvalho",
+    phone: "(62) 98555-6622",
+    address: "Rua Bela Vista, 120 - Jardim América",
+    city: "Aparecida de Goiânia",
+    state: "GO",
+    bio: "Buscamos apoio para nosso filho com necessidades especiais e sua rotina escolar.",
+    neededCareTypes: [CareType.CHILD, CareType.SPECIAL_NEEDS],
+    hourlyBudget: 55,
+  },
+  {
+    email: `familia6${EMAIL_DOMAIN}`,
+    name: "Família Nogueira",
+    phone: "(62) 98666-7733",
+    address: "Rua Central, 78 - Centro",
+    city: "Trindade",
+    state: "GO",
+    bio: "Precisamos de cuidador(a) para revezar entre nossa avó e nossos filhos pequenos.",
+    neededCareTypes: [CareType.ELDERLY, CareType.CHILD],
+  },
+  {
+    email: `familia7${EMAIL_DOMAIN}`,
+    name: "Família Barros",
+    phone: "(62) 98777-8844",
+    address: "Rua Goiás, 210 - Jardim Primavera",
+    city: "Senador Canedo",
+    state: "GO",
+    bio: "Nosso filho tem necessidades especiais e precisa de acompanhamento especializado.",
+    neededCareTypes: [CareType.SPECIAL_NEEDS],
+    hourlyBudget: 25,
+  },
+  {
+    email: `familia8${EMAIL_DOMAIN}`,
+    name: "Família Correia",
+    phone: "(62) 98888-9955",
+    address: "Rua das Mangueiras, 33 - Centro",
+    city: "Goianira",
+    state: "GO",
+    bio: "Família grande, buscamos cuidador(a) versátil para idosos, crianças e necessidades especiais.",
+    neededCareTypes: [CareType.ELDERLY, CareType.CHILD, CareType.SPECIAL_NEEDS],
+    // Second family (besides família2/Souza) demonstrating
+    // visibleToCaregivers -- see CLAUDE.md "Dados de demonstração".
+    visibleToCaregivers: false,
+  },
+  {
+    email: `familia9${EMAIL_DOMAIN}`,
+    name: "Família Dias",
+    phone: "(62) 98999-0011",
+    address: "Rua Principal, 90 - Setor Aeroporto",
+    city: "Bela Vista de Goiás",
+    state: "GO",
+    bio: "Precisamos de cuidado para nossa filha pequena no contraturno escolar.",
+    neededCareTypes: [CareType.CHILD],
+    hourlyBudget: 15,
+  },
+  {
+    email: `familia10${EMAIL_DOMAIN}`,
+    name: "Família Farias",
+    phone: "(62) 98101-2233",
+    address: "Rua 22, 415 - Setor Sul",
+    city: "Goiânia",
+    state: "GO",
+    bio: "Buscamos cuidador(a) para nosso avô, que mora conosco.",
+    neededCareTypes: [CareType.ELDERLY],
+  },
+  {
+    email: `familia11${EMAIL_DOMAIN}`,
+    name: "Família Machado",
+    phone: "(62) 98202-3344",
+    address: "Avenida Buriti, 500 - Cidade Livre",
+    city: "Aparecida de Goiânia",
+    state: "GO",
+    bio: "Cuidamos de nossa mãe idosa e de nosso irmão com necessidades especiais.",
+    neededCareTypes: [CareType.ELDERLY, CareType.SPECIAL_NEEDS],
+    hourlyBudget: 60,
+  },
+  {
+    email: `familia12${EMAIL_DOMAIN}`,
+    name: "Família Peixoto",
+    phone: "(62) 98303-4455",
+    address: "Rua Nova, 60 - Residencial Trindade",
+    city: "Trindade",
+    state: "GO",
+    bio: "Precisamos de apoio no cuidado do nosso filho recém-nascido.",
+    neededCareTypes: [CareType.CHILD],
+    // Third family demonstrating visibleToCaregivers -- see CLAUDE.md
+    // "Dados de demonstração".
+    visibleToCaregivers: false,
+  },
+  {
+    email: `familia13${EMAIL_DOMAIN}`,
+    name: "Família Queiroz",
+    phone: "(62) 98404-5566",
+    address: "Avenida Brasil, 700 - Vila São José",
+    city: "Senador Canedo",
+    state: "GO",
+    bio: "Buscamos cuidador(a) para revezar entre nossos pais idosos e nossos filhos.",
+    neededCareTypes: [CareType.ELDERLY, CareType.CHILD],
+    hourlyBudget: 40,
+  },
+  {
+    email: `familia14${EMAIL_DOMAIN}`,
+    name: "Família Rezende",
+    phone: "(62) 98505-6677",
+    address: "Rua dos Girassóis, 15 - Residencial Buena Vista",
+    city: "Goianira",
+    state: "GO",
+    bio: "Nossa filha tem necessidades especiais e precisa de acompanhamento terapêutico.",
+    neededCareTypes: [CareType.SPECIAL_NEEDS],
+  },
+  {
+    email: `familia15${EMAIL_DOMAIN}`,
+    name: "Família Sales",
+    phone: "(62) 98606-7788",
+    address: "Rua do Centro, 5 - Centro",
+    city: "Bela Vista de Goiás",
+    state: "GO",
+    bio: "Família ampla, buscamos cuidador(a) de confiança para idosos, crianças e necessidades especiais.",
+    neededCareTypes: [CareType.ELDERLY, CareType.CHILD, CareType.SPECIAL_NEEDS],
+    hourlyBudget: 80,
+  },
 ];
 
-// Indices into FAMILY_SEEDS / CAREGIVER_SEEDS. Deliberately concentrated so
-// a single login during the presentation has something to show:
-// familia1 (Pereira) ends up with one COMPLETED + one ACCEPTED hire, and
-// cuidador4 (Diego) ends up with one ACCEPTED + one PENDING request received.
+// Indices into FAMILY_SEEDS / CAREGIVER_SEEDS. Deliberately concentrated on
+// just 3 families (Pereira, Souza, Ribeiro) x 3 caregivers (Ana Paula,
+// Bruno, Diego) -- the original showcase accounts from when the dataset was
+// 3 families/5 caregivers -- rather than spreading Hire history thinly
+// across all 15/15: a single login during the presentation has something
+// to show (Pereira and Ribeiro end up with 3 Hires each, Diego with 3,
+// Souza/Ana Paula/Bruno with 2 each), while the other 12 families and 12
+// caregivers added later have no Hire history at all, which is fine -- they
+// exist to populate search/matching results, not the contratações/
+// solicitações screens.
 const HIRE_SEEDS: Array<{
   familyIndex: number;
   caregiverIndex: number;
@@ -259,6 +554,11 @@ const HIRE_SEEDS: Array<{
   // rule POST /api/hires enforces server-side (see CLAUDE.md "Tipo de
   // cuidado do Hire").
   careType: CareType;
+  // Who reached out first -- see CLAUDE.md "Fluxo de contratação (Hire)".
+  // Mostly FAMILY (matches the pre-Fase-2 default every existing seed Hire
+  // already had), with a few CAREGIVER ones among the new entries to
+  // exercise the "cuidador demonstrou interesse" direction too.
+  initiatedBy: HireInitiator;
   message?: string;
   review?: { rating: number; comment: string };
 }> = [
@@ -267,6 +567,7 @@ const HIRE_SEEDS: Array<{
     caregiverIndex: 0,
     status: HireStatus.COMPLETED,
     careType: CareType.ELDERLY,
+    initiatedBy: HireInitiator.FAMILY,
     review: {
       rating: 5,
       comment: "Ana foi maravilhosa com minha mãe, muito atenciosa e pontual!",
@@ -277,6 +578,7 @@ const HIRE_SEEDS: Array<{
     caregiverIndex: 1,
     status: HireStatus.COMPLETED,
     careType: CareType.CHILD,
+    initiatedBy: HireInitiator.FAMILY,
     review: {
       rating: 3,
       comment: "Bom cuidado com as crianças, mas às vezes chegou atrasado.",
@@ -287,6 +589,7 @@ const HIRE_SEEDS: Array<{
     caregiverIndex: 3,
     status: HireStatus.PENDING,
     careType: CareType.SPECIAL_NEEDS,
+    initiatedBy: HireInitiator.FAMILY,
     message: "Olá Diego, gostaríamos de contratar seus serviços para cuidar da minha avó e do meu sobrinho.",
   },
   {
@@ -294,7 +597,45 @@ const HIRE_SEEDS: Array<{
     caregiverIndex: 3,
     status: HireStatus.ACCEPTED,
     careType: CareType.ELDERLY,
+    initiatedBy: HireInitiator.FAMILY,
     message: "Precisaríamos de apoio adicional nos fins de semana, além do cuidado já combinado.",
+  },
+  // A second, earlier Hire between the same pair as the first entry above
+  // (Pereira x Ana Paula) -- valid because both are terminal statuses
+  // (COMPLETED and REJECTED both leave activeHireKey null, so the unique
+  // constraint never sees a conflict): a first attempt that didn't work
+  // out, followed later by the successful one already seeded above.
+  {
+    familyIndex: 0,
+    caregiverIndex: 0,
+    status: HireStatus.REJECTED,
+    careType: CareType.ELDERLY,
+    initiatedBy: HireInitiator.CAREGIVER,
+    message: "Olá, tenho disponibilidade para cuidar da sua mãe, posso ajudar?",
+  },
+  {
+    familyIndex: 1,
+    caregiverIndex: 3,
+    status: HireStatus.CANCELLED,
+    careType: CareType.CHILD,
+    initiatedBy: HireInitiator.CAREGIVER,
+    message: "Posso ajudar com o cuidado das crianças no período que vocês precisarem.",
+  },
+  {
+    familyIndex: 2,
+    caregiverIndex: 0,
+    status: HireStatus.PENDING,
+    careType: CareType.ELDERLY,
+    initiatedBy: HireInitiator.CAREGIVER,
+    message: "Tenho experiência com idosos e gostaria de atender sua avó.",
+  },
+  {
+    familyIndex: 2,
+    caregiverIndex: 1,
+    status: HireStatus.ACCEPTED,
+    careType: CareType.CHILD,
+    initiatedBy: HireInitiator.FAMILY,
+    message: "Precisamos de ajuda com as crianças enquanto cuidamos da avó.",
   },
 ];
 
@@ -429,6 +770,7 @@ async function seedHires(
         caregiverId,
         status: hireSeed.status,
         careType: hireSeed.careType,
+        initiatedBy: hireSeed.initiatedBy,
         message: hireSeed.message,
         activeHireKey: isActive ? `${familyId}:${caregiverId}` : null,
       },
