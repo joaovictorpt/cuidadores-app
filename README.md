@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Trevo — Cuidado que conecta
 
-## Getting Started
+Um marketplace de dois lados para conectar famílias que precisam de
+cuidadores (para idosos, crianças ou pessoas com necessidades especiais) a
+cuidadores profissionais.
 
-First, run the development server:
+🔗 **[trevo em produção →](https://cuidadores-app.vercel.app)**
+
+---
+
+## Sobre o projeto
+
+Este é meu Trabalho de Conclusão de Curso em Ciência da Computação pela
+UNIP. Além de resolver um problema real (encontrar um cuidador de
+confiança não é trivial, e a maioria das opções hoje depende de indicação
+boca a boca), o projeto foi um ponto de partida para estudar a fundo dois
+temas que me interessaram: teoria dos grafos aplicada a problemas
+de emparelhamento, e as decisões de segurança/engenharia por trás de um
+sistema com dados sensíveis de verdade.
+
+O núcleo técnico modela o problema família↔cuidador como um **grafo
+bipartido ponderado**, e usa dois algoritmos diferentes para resolvê-lo: um
+ranking guloso por peso (rápido, direto) e uma implementação do
+**Gale-Shapley** (variante hospital-residents) para emparelhamento
+estável — o mesmo tipo de algoritmo usado em sistemas reais de alocação de
+residência médica.
+
+![Home](./docs/screenshots/home.png)
+![Busca de cuidadores](./docs/screenshots/buscar-familias.png)
+![Dashboard do cuidador](./docs/screenshots/dashboard-cuidador.png)
+
+## Funcionalidades
+
+- Cadastro e autenticação separados por tipo de usuário (família/cuidador)
+- Busca e recomendação automática nos dois sentidos, com geolocalização
+  real (geocodificação via OpenStreetMap)
+- Matching por grafo bipartido ponderado (distância, tipo de cuidado,
+  avaliação, preço) + emparelhamento estável via Gale-Shapley
+- Fluxo completo de contratação (solicitar → aceitar/recusar → concluir),
+  com contato liberado condicionalmente
+- Avaliações pós-serviço
+- Upload seguro de documentos de verificação (bucket privado + signed URLs)
+- Controles de privacidade e disponibilidade para os dois lados
+
+## Stack
+
+| | |
+|---|---|
+| Frontend + Backend | Next.js (App Router) + TypeScript |
+| Banco de dados | PostgreSQL (Supabase) |
+| ORM | Prisma |
+| Autenticação | NextAuth.js |
+| Estilo | Tailwind CSS v4 |
+| Deploy | Vercel |
+
+## Rodando localmente
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/joaovictorpt/cuidadores-app.git
+cd cuidadores-app
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Crie um `.env` a partir do `.env.example` e preencha com suas próprias
+credenciais (Supabase, NextAuth, etc.):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Rode as migrations e suba o servidor:
 
-## Learn More
+```bash
+npx prisma migrate dev
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+O app estará em `http://localhost:3000`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Popular com dados de demonstração
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run seed:demo
+```
 
-## Deploy on Vercel
+Cria 15 famílias e 15 cuidadores fictícios (mesma senha para todos:
+`Demo@2026`), com variedade de cidades, preços, tipos de cuidado e
+histórico de contratações — útil para testar a busca e o matching sem
+precisar cadastrar tudo manualmente. Para limpar:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run cleanup:demo
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Autor
+
+João Victor Porto Tolentino — Ciência da Computação, UNIP (previsão de
+conclusão: 06/2027)
+
+[LinkedIn](https://linkedin.com/in/joão-victor-porto-tolentino-501ba1402) ·
+[GitHub](https://github.com/joaovictorpt)
