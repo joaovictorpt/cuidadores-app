@@ -17,8 +17,9 @@ type ComboboxProps = {
   emptyMessage?: string;
 };
 
-// Diacritic-insensitive compare so "goias"/"sao paulo" (no accents -- common
-// when typing quickly) still matches "Goiás"/"São Paulo".
+// Comparação sem sensibilidade a acento, para que "goias"/"sao paulo" (sem
+// acentos -- comum quando se digita rápido) ainda encontre "Goiás"/"São
+// Paulo".
 function normalizeForSearch(value: string): string {
   return value
     .normalize("NFD")
@@ -26,13 +27,14 @@ function normalizeForSearch(value: string): string {
     .toLowerCase();
 }
 
-// Accessible single-select searchable combobox (ARIA 1.2 "combobox with
-// list autocomplete" pattern), backing the Estado/Cidade fields in
-// app/components/location-fields.tsx. Unlike a native <select>, it lets the
-// user filter a long option list by typing -- but unlike a plain <input>,
-// the value that actually reaches `onChange` can only ever be one of
-// `options`: free text that doesn't match anything is discarded on blur
-// (reverted to the last valid selection), never propagated as a value.
+// Combobox acessível de seleção única e pesquisável (padrão ARIA 1.2
+// "combobox with list autocomplete"), usado por baixo dos campos
+// Estado/Cidade em app/components/location-fields.tsx. Ao contrário de um
+// <select> nativo, permite ao usuário filtrar uma lista longa de opções
+// digitando -- mas ao contrário de um <input> comum, o valor que de fato
+// chega em `onChange` só pode ser um dos `options`: texto livre que não bate
+// com nada é descartado no blur (revertido para a última seleção válida),
+// nunca propagado como valor.
 export function Combobox({
   id,
   value,
@@ -56,8 +58,9 @@ export function Combobox({
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
 
-  // Keep the displayed text in sync when the selection changes from the
-  // outside (e.g. LocationFields resetting city to "" when state changes).
+  // Mantém o texto exibido sincronizado quando a seleção muda a partir de
+  // fora (ex.: LocationFields resetando a cidade para "" quando o estado
+  // muda).
   useEffect(() => {
     setQuery(selectedOption?.label ?? "");
     setHasUserTyped(false);
@@ -81,10 +84,11 @@ export function Combobox({
   }
 
   function handleBlur() {
-    // An exact (diacritic/case-insensitive) match on blur still counts as a
-    // selection, so tabbing away right after typing a full valid name
-    // works -- anything else reverts to the last valid selection instead
-    // of leaking free text into the form's state.
+    // Uma correspondência exata (sem sensibilidade a acento/maiúsculas) no
+    // blur ainda conta como uma seleção, então sair com Tab logo depois de
+    // digitar um nome válido por completo funciona -- qualquer outra coisa
+    // reverte para a última seleção válida em vez de deixar texto livre
+    // vazar para o estado do formulário.
     const typed = normalizeForSearch(query);
     const exactMatch = options.find((option) => normalizeForSearch(option.label) === typed);
     commit(exactMatch ?? selectedOption);
@@ -114,7 +118,7 @@ export function Combobox({
     }
 
     if (event.key === "Enter") {
-      // Also stops this from submitting the surrounding <form>.
+      // Também impede que isso submeta o <form> ao redor.
       if (isOpen) {
         event.preventDefault();
         const chosen = filteredOptions[highlightedIndex];
@@ -179,9 +183,9 @@ export function Combobox({
               role="option"
               aria-selected={option.value === value}
               onMouseDown={(event) => {
-                // Prevents the input from blurring before the click is
-                // processed -- without this, the dropdown would unmount
-                // (isOpen -> false via blur) before onClick ever fires.
+                // Impede que o input perca o foco antes do clique ser
+                // processado -- sem isso, o dropdown seria desmontado
+                // (isOpen -> false via blur) antes do onClick sequer disparar.
                 event.preventDefault();
                 commit(option);
               }}

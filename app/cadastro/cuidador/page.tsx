@@ -71,12 +71,12 @@ export default function CadastroCuidadorPage() {
     event.preventDefault();
     setError(null);
 
-    // Client-side checks for instant feedback -- the server (app/api
-    // /register/route.ts) re-validates all of this authoritatively via the
-    // same lib/age.ts/lib/phone.ts helpers, so none of it can be bypassed by
-    // skipping the UI. parseBirthDateInput rejects both incomplete input
-    // (fewer than 8 digits typed) and calendar-impossible dates (e.g.
-    // 31/02) up front.
+    // Checagens no cliente para feedback instantâneo -- o servidor (app/api
+    // /register/route.ts) revalida tudo isso de forma autoritativa via os
+    // mesmos helpers de lib/age.ts/lib/phone.ts, então nada disso pode ser
+    // contornado pulando a UI. parseBirthDateInput rejeita tanto entrada
+    // incompleta (menos de 8 dígitos digitados) quanto datas
+    // calendário-impossíveis (ex.: 31/02) de antemão.
     if (!isCompletePhone(form.phone)) {
       setError(PHONE_INVALID_MESSAGE);
       return;

@@ -1,29 +1,30 @@
 /**
- * Generic implementation of the Gale-Shapley algorithm, hospital-residents
- * variant: many-to-one stable matching where each receiver (hospital/
- * caregiver) can hold more than one proposer (resident/family) up to a
- * fixed capacity, while each proposer is matched to at most one receiver.
+ * Implementação genérica do algoritmo Gale-Shapley, variante
+ * hospital-residents: matching estável muitos-para-um, em que cada
+ * receptor (hospital/cuidador) pode reter mais de um proponente
+ * (residente/família) até uma capacidade fixa, enquanto cada proponente é
+ * associado a no máximo um receptor.
  *
- * This is deliberately generic (string ids + preference lists) instead of
- * being tied to Family/Caregiver types, so it can be unit-tested in
- * isolation from Prisma and the rest of the domain model.
+ * Isso é deliberadamente genérico (ids string + listas de preferência) em
+ * vez de amarrado aos tipos Family/Caregiver, para poder ser testado de
+ * forma isolada, sem depender do Prisma nem do resto do modelo de domínio.
  *
- * Result is PROPOSER-OPTIMAL: every proposer ends up with the best receiver
- * they could possibly get in ANY stable matching, at the cost of receivers
- * getting the worst outcome they could get in any stable matching. This is
- * the classical guarantee of the proposing side in Gale-Shapley.
+ * O resultado é PROPOSER-OPTIMAL: todo proponente termina com o melhor
+ * receptor que poderia obter em QUALQUER matching estável, ao custo de os
+ * receptores obterem o pior resultado possível dentre os matchings
+ * estáveis. Essa é a garantia clássica do lado que propõe no Gale-Shapley.
  */
 
 export type StableMatchingInput = {
-  /** Ids of the proposing side (families). */
+  /** Ids do lado proponente (famílias). */
   proposers: string[];
-  /** Ids of the receiving side (caregivers). */
+  /** Ids do lado receptor (cuidadores). */
   receivers: string[];
-  /** proposerId -> receiverIds, ordered from most to least preferred. */
+  /** proposerId -> receiverIds, ordenados do mais para o menos preferido. */
   proposerPreferences: Map<string, string[]>;
-  /** receiverId -> proposerIds, ordered from most to least preferred. */
+  /** receiverId -> proposerIds, ordenados do mais para o menos preferido. */
   receiverPreferences: Map<string, string[]>;
-  /** Max number of proposers a single receiver can hold at once. */
+  /** Número máximo de proponentes que um único receptor pode reter ao mesmo tempo. */
   receiverCapacity: number;
 };
 
@@ -34,27 +35,29 @@ export function stableMatching({
   receiverPreferences,
   receiverCapacity,
 }: StableMatchingInput): Map<string, string[]> {
-  // Final result: receiverId -> proposerIds currently held. Every receiver
-  // starts empty, even ones nobody ever proposes to, so the returned Map
-  // always has one entry per receiver.
+  // Resultado final: receiverId -> proposerIds atualmente retidos. Todo
+  // receptor começa vazio, mesmo aqueles a quem ninguém nunca propõe, para
+  // que o Map retornado sempre tenha uma entrada por receptor.
   const matches = new Map<string, string[]>();
   receivers.forEach((receiverId) => matches.set(receiverId, []));
 
-  // Each proposer walks their own preference list left to right, one step
-  // at a time, never revisiting a receiver they already tried. This index
-  // is what guarantees the algorithm terminates: it only ever increases.
+  // Cada proponente percorre sua própria lista de preferências da esquerda
+  // para a direita, um passo de cada vez, nunca revisitando um receptor já
+  // tentado. Esse índice é o que garante que o algoritmo termina: ele só
+  // aumenta, nunca diminui.
   const nextProposalIndex = new Map<string, number>();
   proposers.forEach((proposerId) => nextProposalIndex.set(proposerId, 0));
 
-  // Queue of proposers who still need to make a proposal this round --
-  // either because they were never matched yet, or because they were just
-  // rejected/bumped and need to try their next choice.
+  // Fila de proponentes que ainda precisam fazer uma proposta nesta rodada
+  // -- seja porque ainda não foram associados a ninguém, seja porque
+  // acabaram de ser rejeitados/substituídos e precisam tentar a próxima
+  // opção.
   const freeProposers: string[] = [...proposers];
 
-  // Precompute, for every receiver, a proposerId -> rank lookup table from
-  // their preference list (rank 0 = most preferred). This turns "does this
-  // receiver prefer proposer A over proposer B" into an O(1) comparison
-  // instead of two indexOf() scans per comparison.
+  // Pré-computa, para cada receptor, uma tabela de busca proposerId -> rank
+  // a partir de sua lista de preferências (rank 0 = mais preferido). Isso
+  // transforma "esse receptor prefere o proponente A ao proponente B" numa
+  // comparação O(1), em vez de duas buscas indexOf() por comparação.
   const receiverRank = new Map<string, Map<string, number>>();
   for (const receiverId of receivers) {
     const prefs = receiverPreferences.get(receiverId) ?? [];
@@ -68,27 +71,29 @@ export function stableMatching({
     const proposerPrefs = proposerPreferences.get(proposerId) ?? [];
     const proposeIndex = nextProposalIndex.get(proposerId)!;
 
-    // This proposer has already proposed to everyone on their list and
-    // been turned down by all of them -- they stay unmatched. This is a
-    // normal, valid outcome of Gale-Shapley (e.g. no eligible caregiver
-    // had room or interest), not an error.
+    // Este proponente já propôs a todos em sua lista e foi recusado por
+    // todos -- ele permanece sem par. Este é um resultado normal e válido
+    // do Gale-Shapley (ex.: nenhum cuidador elegível tinha vaga ou
+    // interesse), não um erro.
     if (proposeIndex >= proposerPrefs.length) {
       continue;
     }
 
     const receiverId = proposerPrefs[proposeIndex];
-    // Whatever happens next (accepted, bumped later, or rejected), this
-    // proposer has now "used up" this choice -- next time they're free
-    // they move on to the next entry in their list.
+    // Independentemente do que acontecer a seguir (aceito, substituído
+    // depois, ou rejeitado), este proponente já "consumiu" essa opção --
+    // na próxima vez que estiver livre, ele avança para a próxima entrada
+    // da lista.
     nextProposalIndex.set(proposerId, proposeIndex + 1);
 
     const rankMap = receiverRank.get(receiverId);
 
-    // The receiver never ranked this proposer at all, meaning this
-    // proposer is unacceptable to them (e.g. outside eligibility criteria
-    // from the receiver's own preference-building step). Per the standard
-    // Gale-Shapley convention, an unranked proposer is auto-rejected --
-    // skip straight back into the queue to try the next choice.
+    // O receptor nunca classificou este proponente, ou seja, ele é
+    // inaceitável para o receptor (ex.: fora dos critérios de
+    // elegibilidade da própria etapa de construção de preferências do
+    // receptor). Pela convenção padrão do Gale-Shapley, um proponente não
+    // classificado é auto-rejeitado -- volta direto para a fila para
+    // tentar a próxima opção.
     if (!rankMap || !rankMap.has(proposerId)) {
       freeProposers.push(proposerId);
       continue;
@@ -97,16 +102,18 @@ export function stableMatching({
     const held = matches.get(receiverId)!;
 
     if (held.length < receiverCapacity) {
-      // Receiver still has an open slot: accept provisionally. This is
-      // only ever provisional -- a better-ranked proposer arriving later
-      // can still bump this one out once the receiver is full.
+      // O receptor ainda tem uma vaga aberta: aceita provisoriamente. Isso
+      // é sempre apenas provisório -- um proponente melhor classificado
+      // chegando depois ainda pode substituir este quando o receptor
+      // estiver cheio.
       held.push(proposerId);
       continue;
     }
 
-    // Receiver is already at capacity. Find the currently-held proposer
-    // this receiver likes LEAST (highest rank number = least preferred),
-    // since that's the only one worth comparing the new proposal against.
+    // O receptor já está na capacidade máxima. Encontra, entre os
+    // proponentes atualmente retidos, o que este receptor gosta MENOS
+    // (maior número de rank = menos preferido), já que é o único que vale
+    // a pena comparar com a nova proposta.
     let worstHeldIndex = 0;
     let worstHeldRank = -1;
     held.forEach((heldProposerId, index) => {
@@ -120,19 +127,19 @@ export function stableMatching({
     const newProposerRank = rankMap.get(proposerId)!;
 
     if (newProposerRank < worstHeldRank) {
-      // Receiver prefers the new proposer over its current worst match:
-      // swap them. The bumped proposer becomes free again and will try
-      // their next preference on a future iteration -- they are NOT
-      // discarded, just displaced, which is exactly what keeps the
-      // algorithm converging toward stability instead of settling for a
-      // suboptimal assignment.
+      // O receptor prefere o novo proponente ao seu pior par atual: troca
+      // os dois. O proponente substituído fica livre novamente e tentará
+      // sua próxima preferência numa iteração futura -- ele NÃO é
+      // descartado, apenas deslocado, o que é exatamente o que mantém o
+      // algoritmo convergindo para a estabilidade em vez de se acomodar
+      // numa associação subótima.
       const bumpedProposerId = held[worstHeldIndex];
       held[worstHeldIndex] = proposerId;
       freeProposers.push(bumpedProposerId);
     } else {
-      // Receiver already holds proposers it likes at least as much as
-      // this one and has no room left: reject this proposal outright.
-      // The proposer goes back into the queue to try their next choice.
+      // O receptor já retém proponentes que gosta pelo menos tanto quanto
+      // este e não tem mais vaga: rejeita esta proposta de imediato. O
+      // proponente volta para a fila para tentar a próxima opção.
       freeProposers.push(proposerId);
     }
   }

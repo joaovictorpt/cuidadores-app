@@ -1,20 +1,20 @@
 import type { SVGProps } from "react";
 
-// Vector logo: a hand (first path) holding a three-leaf clover (remaining 5
-// paths), each with its own fixed fill -- skin tone for the hand, green for
-// the clover -- instead of a single currentColor inherited from Tailwind
-// text-color classes. No width/height baked in -- size it from the outside
-// via className (e.g. <TrevoLogo className="h-10 w-10" />).
+// Logo vetorial: uma mão (primeiro path) segurando um trevo de três folhas
+// (os outros 5 paths), cada um com sua própria cor fixa -- tom de pele para
+// a mão, verde para o trevo -- em vez de um único currentColor herdado das
+// classes de cor de texto do Tailwind. Sem width/height fixos -- dimensione
+// de fora via className (ex.: <TrevoLogo className="h-10 w-10" />).
 export function TrevoLogo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048" {...props}>
-      {/* Hand */}
+      {/* Mão */}
       <path
         fill="#D9A576"
         transform="translate(0,0)"
         d="M 1425.38 1145.7 C 1427.02 1153.14 1426.83 1189.67 1426.88 1199.17 C 1427.76 1263.08 1427.93 1319.18 1407.99 1380.66 C 1340.67 1588.28 1111.61 1712.59 902.318 1644.13 C 837.852 1623.11 779.806 1586.01 733.662 1536.32 C 723.699 1525.52 712.046 1512.22 705.477 1499.24 C 717.745 1443.85 746.589 1401.65 787.168 1363.52 C 811.563 1343.01 838.034 1323.3 867.989 1311.88 C 916.187 1293.49 967.939 1283.34 1017.59 1269.23 C 1049.47 1259.84 1081.41 1250.63 1113.4 1241.61 C 1128.65 1237.29 1144.81 1232.06 1160.07 1229.23 C 1195.19 1222.69 1211.3 1265.44 1196.64 1292.17 C 1191.45 1301.64 1181.21 1312.86 1171.42 1317.41 C 1129.32 1337.01 1081.37 1342.47 1037.47 1357.5 C 1018.59 1363.92 1013.61 1377.89 1020.63 1396.24 C 1024.24 1405.67 1035.41 1416.76 1045.74 1419.68 C 1095.82 1433.82 1157.86 1405.22 1204.04 1386.78 C 1283.44 1348.72 1356.2 1287.57 1399.55 1210.17 C 1412.14 1187.69 1416.41 1169.52 1425.06 1146.53 L 1425.38 1145.7 z"
       />
-      {/* Clover leaves */}
+      {/* Folhas do trevo */}
       <path
         fill="#2F7A4D"
         transform="translate(0,0)"

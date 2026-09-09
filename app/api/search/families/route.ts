@@ -42,9 +42,9 @@ export async function GET() {
   }
 
   if (caregiverProfile.careTypes.length === 0) {
-    // Same "profile incomplete, not a request problem" distinction as
-    // GET /api/search/caregivers -- `reason` lets a future UI show a
-    // "complete your profile" CTA instead of a generic message.
+    // Mesma distinção "perfil incompleto, não um problema da requisição"
+    // de GET /api/search/caregivers -- `reason` permite que uma UI futura
+    // mostre um CTA "complete seu perfil" em vez de uma mensagem genérica.
     return NextResponse.json(
       {
         error:
@@ -57,7 +57,7 @@ export async function GET() {
 
   const ranked = await rankFamiliesForCaregiver(caregiverProfile);
 
-  // No `address` here by design -- see FamilyForDisplay in lib/matching.ts.
+  // Sem `address` aqui de propósito -- ver FamilyForDisplay em lib/matching.ts.
   const results = ranked.map(({ family, distanceKm, matchScore }) => ({
     familyId: family.userId,
     name: family.name,

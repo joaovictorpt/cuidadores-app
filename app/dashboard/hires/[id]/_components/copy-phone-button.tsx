@@ -4,9 +4,10 @@ import { useState } from "react";
 
 import { secondaryButtonClass } from "@/lib/ui";
 
-// How long the "Copiado!" confirmation stays up before reverting to the
-// idle label -- long enough to register as feedback, short enough not to
-// leave a stale confirmation showing if the user glances back later.
+// Por quanto tempo a confirmação "Copiado!" fica visível antes de reverter
+// para o texto padrão -- tempo suficiente para registrar como feedback,
+// curto o bastante para não deixar uma confirmação obsoleta aparecendo se
+// o usuário olhar de novo mais tarde.
 const CONFIRMATION_DURATION_MS = 2000;
 
 export function CopyPhoneButton({ phone }: { phone: string }) {

@@ -11,12 +11,13 @@ type BirthDateInputProps = {
   required?: boolean;
 };
 
-// Masked DD/MM/AAAA birth date field, built on react-number-format's
-// PatternFormat -- the same component already used for PhoneInput, so
-// typing behaves identically (a normal text cursor, not the native
-// <input type="date">'s day/month/year segment picker). `onChange` receives
-// the unformatted digits (`values.value`); see lib/age.ts#parseBirthDateInput
-// for turning that into an actual Date once the user finishes typing.
+// Campo de data de nascimento mascarado DD/MM/AAAA, construído sobre o
+// PatternFormat do react-number-format -- o mesmo componente já usado por
+// PhoneInput, então a digitação se comporta de forma idêntica (um cursor de
+// texto normal, não o seletor de segmentos dia/mês/ano do
+// <input type="date"> nativo). `onChange` recebe os dígitos sem formatação
+// (`values.value`); ver lib/age.ts#parseBirthDateInput para transformar isso
+// numa `Date` de fato assim que o usuário termina de digitar.
 export function BirthDateInput({ id, value, onChange, required }: BirthDateInputProps) {
   return (
     <PatternFormat

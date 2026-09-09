@@ -20,15 +20,15 @@ export async function GET() {
     );
   }
 
-  // NOTE: this recomputes the stable matching for EVERY family and
-  // caregiver in the system on every request, even though only the
-  // logged-in family's result is used below. That's fine at MVP/TCC scale
-  // but doesn't scale: as the user base grows this becomes an
-  // O(all families x all caregivers) computation per request. If usage
-  // grows, this is a good candidate to precompute on a schedule (e.g. a
-  // cron job) or cache the result (recompute every N minutes, or
-  // invalidate on profile changes) instead of running it synchronously on
-  // every single request.
+  // NOTA: isso recalcula o matching estável para TODA família e cuidador do
+  // sistema a cada requisição, mesmo que só o resultado da família logada
+  // seja usado abaixo. Isso é aceitável na escala de MVP/TCC, mas não
+  // escala: conforme a base de usuários cresce, isso vira um cálculo
+  // O(todas as famílias x todos os cuidadores) por requisição. Se o uso
+  // crescer, este é um bom candidato a ser pré-computado numa agenda (ex.:
+  // um cron job) ou ter o resultado cacheado (recalcular a cada N minutos,
+  // ou invalidar quando um perfil muda) em vez de rodar de forma síncrona
+  // a cada requisição.
   const matchesByCaregiver = await runStableMatchingForAllFamilies();
 
   let matchedCaregiverUserId: string | null = null;

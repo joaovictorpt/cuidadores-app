@@ -5,13 +5,13 @@ const WEEK = 7 * DAY;
 const MONTH = 30 * DAY;
 const YEAR = 365 * DAY;
 
-// Formats a fixed time span (Hire.acceptedAt -> Hire.completedAt) as a
-// single largest-unit phrase ("3 dias", "5 horas") -- same bucket approach
-// as lib/relative-time.ts's "há X" phrasing, but without the "há" prefix
-// (this describes a span, not how long ago something happened) and
-// rounding instead of flooring: the span is fixed once computed, so
-// rounding to the nearest unit reads more naturally than always rounding
-// down.
+// Formata um intervalo de tempo fixo (Hire.acceptedAt -> Hire.completedAt)
+// como uma frase de unidade única maior ("3 dias", "5 horas") -- mesma
+// abordagem de faixas do "há X" de lib/relative-time.ts, mas sem o prefixo
+// "há" (isso descreve um intervalo, não há quanto tempo algo aconteceu) e
+// arredondando em vez de truncar: o intervalo já é fixo quando calculado,
+// então arredondar para a unidade mais próxima soa mais natural do que
+// sempre truncar para baixo.
 export function formatDuration(milliseconds: number): string {
   const totalSeconds = Math.round(milliseconds / 1000);
 

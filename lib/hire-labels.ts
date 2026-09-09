@@ -8,8 +8,8 @@ export const HIRE_STATUS_LABELS: Record<HireStatus, string> = {
   CANCELLED: "Cancelada",
 };
 
-// Keyed by the TARGET status of the action, e.g. clicking the button
-// labeled "Aceitar" issues a PATCH moving the Hire to ACCEPTED.
+// Indexado pelo status DE DESTINO da ação, ex.: clicar no botão rotulado
+// "Aceitar" dispara um PATCH movendo o Hire para ACCEPTED.
 export const HIRE_ACTION_LABELS: Partial<Record<HireStatus, string>> = {
   ACCEPTED: "Aceitar",
   REJECTED: "Recusar",
@@ -17,11 +17,12 @@ export const HIRE_ACTION_LABELS: Partial<Record<HireStatus, string>> = {
   CANCELLED: "Cancelar",
 };
 
-// Now that either side can initiate a Hire (see CLAUDE.md "Fluxo de
-// contratação"), a single dashboard list can mix requests the viewer sent
-// with ones they received -- this label disambiguates each card from the
-// current viewer's point of view, independent of which role always plays
-// "family" or "caregiver" in the underlying data.
+// Agora que qualquer um dos dois lados pode iniciar um Hire (ver CLAUDE.md
+// "Fluxo de contratação"), uma única lista do dashboard pode misturar
+// solicitações que quem está vendo enviou com as que recebeu -- esse rótulo
+// desambigua cada card do ponto de vista de quem está vendo, independente
+// de qual role sempre exerce o papel de "família" ou "cuidador" nos dados
+// subjacentes.
 export function getHireDirectionLabel(
   initiatedBy: HireInitiator,
   viewerRole: Role

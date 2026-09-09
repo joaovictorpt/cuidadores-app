@@ -12,11 +12,11 @@ import { formatRelativeTime } from "@/lib/relative-time";
 import { calculateAverageRating } from "@/lib/reviews";
 import { metaTextClass } from "@/lib/ui";
 
-// Filtered view of /dashboard/familia/contratacoes showing only the
-// currently-in-progress relationships (status ACCEPTED) -- everything
-// beyond a card's summary (actions, contact, review) already lives on
-// /dashboard/hires/[id], so cards here just link there instead of
-// duplicating that logic.
+// Visão filtrada de /dashboard/familia/contratacoes mostrando só os
+// relacionamentos atualmente em andamento (status ACCEPTED) -- tudo além do
+// resumo do card (ações, contato, review) já vive em
+// /dashboard/hires/[id], então os cards aqui só linkam pra lá em vez de
+// duplicar essa lógica.
 export default async function TrabalhosAtivosPage() {
   const session = await getServerSession(authOptions);
 

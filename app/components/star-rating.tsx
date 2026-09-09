@@ -5,16 +5,17 @@ import { useRef, useState, type KeyboardEvent } from "react";
 
 const STAR_VALUES = [1, 2, 3, 4, 5];
 
-// Discriminated union so the compiler enforces the pairing: interactive
-// usage must pass `onChange`, read-only usage (e.g. displaying someone
-// else's past review) must not -- there's nothing to commit a change to.
+// União discriminada para que o compilador force o pareamento: uso
+// interativo precisa passar `onChange`, uso somente-leitura (ex.: exibindo
+// uma review antiga de outra pessoa) não pode -- não há nada para commitar
+// uma mudança.
 type StarRatingProps =
   | { value: number; onChange: (value: number) => void; label?: string; readOnly?: false }
   | { value: number; onChange?: undefined; label?: string; readOnly: true };
 
-// Static, non-interactive readout -- role="img" (not role="radiogroup"
-// with disabled radios), since that would tell a screen reader there's an
-// input here to operate, which there isn't.
+// Leitura estática e não interativa -- role="img" (não role="radiogroup"
+// com radios desabilitados), já que isso diria a um leitor de tela que há
+// um input aqui para operar, o que não é o caso.
 function ReadOnlyStarRating({ value, label = "Avaliação" }: { value: number; label?: string }) {
   return (
     <div
@@ -34,16 +35,17 @@ function ReadOnlyStarRating({ value, label = "Avaliação" }: { value: number; l
   );
 }
 
-// Accessible 5-star rating input, following the ARIA "radio group" pattern
-// (https://www.w3.org/WAI/ARIA/apg/patterns/radio/): each star is a
-// role="radio" <button>, arrow keys move focus AND select (roving
-// tabindex -- only the checked star is tabbable), and Enter/Space select
-// the focused star for free, since that's native <button> behavior. Hover
-// only *previews* the fill up to the pointed-at star (via local
-// `hoverValue`) without calling `onChange` -- the committed `value` (from
-// a click or arrow key) is what persists once the pointer leaves, same
-// mental model as fill="currentColor" + `stroke`/`fill` icon coloring
-// already used by ConnectionLine/MatchScoreRing elsewhere in the app.
+// Input de avaliação de 5 estrelas acessível, seguindo o padrão ARIA "radio
+// group" (https://www.w3.org/WAI/ARIA/apg/patterns/radio/): cada estrela é
+// um <button role="radio">, as setas movem o foco E selecionam (roving
+// tabindex -- só a estrela marcada é alcançável por Tab), e Enter/Espaço
+// selecionam a estrela focada de graça, já que esse é o comportamento
+// nativo de um <button>. O hover só *pré-visualiza* o preenchimento até a
+// estrela apontada (via `hoverValue` local) sem chamar `onChange` -- o
+// `value` commitado (de um clique ou seta) é o que persiste quando o
+// ponteiro sai, o mesmo modelo mental da coloração de ícone via
+// fill="currentColor" + `stroke`/`fill` já usado por
+// ConnectionLine/MatchScoreRing em outros lugares do app.
 function InteractiveStarRating({
   value,
   onChange,
@@ -113,11 +115,12 @@ function InteractiveStarRating({
   );
 }
 
-// Dispatches on `readOnly` -- deliberately NOT a single component branching
-// internally on a hook-free early return, since InteractiveStarRating's
-// useState/useRef would then be called conditionally (a Rules-of-Hooks
-// violation). Each branch is its own component instead, so whichever one
-// renders always calls its own hooks unconditionally.
+// Decide com base em `readOnly` -- deliberadamente NÃO um único componente
+// que ramifica internamente com um early return sem hooks, já que os
+// useState/useRef de InteractiveStarRating seriam então chamados
+// condicionalmente (uma violação das Rules of Hooks). Cada ramo é seu
+// próprio componente em vez disso, então qualquer um que renderize sempre
+// chama seus próprios hooks incondicionalmente.
 export function StarRating(props: StarRatingProps) {
   if (props.readOnly) {
     return <ReadOnlyStarRating value={props.value} label={props.label} />;

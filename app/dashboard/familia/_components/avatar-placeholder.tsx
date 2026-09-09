@@ -1,7 +1,7 @@
-// Placeholder avatar for a caregiver card -- subtle diagonal stripes (in
-// accent-light) instead of a flat filled circle, with the name's initial
-// still overlaid on top so cards stay visually distinguishable from each
-// other at a glance. Used in /buscar and /match-recomendado.
+// Avatar placeholder para um card de cuidador -- listras diagonais sutis (em
+// accent-light) em vez de um círculo preenchido chapado, com a inicial do
+// nome ainda sobreposta no centro, pra manter os cards visualmente
+// distinguíveis entre si à primeira vista. Usado em /buscar e /match-recomendado.
 export function AvatarPlaceholder({ name }: { name: string | null }) {
   const initial = (name ?? "C").charAt(0).toUpperCase();
 

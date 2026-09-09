@@ -19,10 +19,11 @@ function formatTimelineEntry(date: Date): string {
   return `${date.toLocaleString("pt-BR")} (${formatRelativeTime(date)})`;
 }
 
-// Shared by both sides of a Hire (family and caregiver) -- unlike
-// /dashboard/familia/contratacoes and /dashboard/cuidador/solicitacoes,
-// which each only ever query the logged-in user's own Hires, this page
-// takes an arbitrary id from the URL and must verify participation itself.
+// Compartilhada pelos dois lados de um Hire (família e cuidador) --
+// diferente de /dashboard/familia/contratacoes e
+// /dashboard/cuidador/solicitacoes, que cada uma só consulta os próprios
+// Hires do usuário logado, esta página recebe um id arbitrário da URL e
+// precisa verificar a participação por conta própria.
 export default async function HireDetailPage({
   params,
 }: {
@@ -60,10 +61,10 @@ export default async function HireDetailPage({
   const isFamily = hire?.familyId === session.user.id;
   const isCaregiver = hire?.caregiverId === session.user.id;
 
-  // Collapsed into a single 404 for both "doesn't exist" and "not a
-  // participant" -- distinguishing them (403 vs 404) would leak to a
-  // logged-in stranger that a given Hire id exists at all, even if they
-  // can't see its contents.
+  // Unificado num único 404 tanto para "não existe" quanto para "não é
+  // participante" -- diferenciar os dois (403 vs 404) vazaria para um
+  // estranho logado a informação de que um determinado id de Hire existe,
+  // mesmo que ele não possa ver o conteúdo.
   if (!hire || (!isFamily && !isCaregiver)) {
     notFound();
   }
@@ -79,10 +80,10 @@ export default async function HireDetailPage({
     ? "/dashboard/familia/contratacoes"
     : "/dashboard/cuidador/solicitacoes";
 
-  // Contact info only surfaces once the arrangement is confirmed
-  // (ACCEPTED/COMPLETED) -- never while still PENDING (nothing to contact
-  // about yet) or after REJECTED/CANCELLED (the relationship never
-  // materialized).
+  // A informação de contato só aparece depois que o acordo está confirmado
+  // (ACCEPTED/COMPLETED) -- nunca enquanto ainda PENDING (não há nada para
+  // contatar ainda) nem depois de REJECTED/CANCELLED (a relação nunca se
+  // concretizou).
   const canShowContact =
     hire.status === HireStatus.ACCEPTED || hire.status === HireStatus.COMPLETED;
 
@@ -193,7 +194,7 @@ export default async function HireDetailPage({
                 Avaliação
               </h2>
               <div className="mt-2 flex items-center justify-between gap-4">
-                {/* review.authorId is always a family's User.id -- see CLAUDE.md "Sistema de Review" */}
+                {/* review.authorId é sempre o User.id de uma família -- ver CLAUDE.md "Sistema de Review" */}
                 <Link
                   href={`/dashboard/profile/family/${hire.review.authorId}`}
                   className="text-sm text-ink/80 hover:underline"

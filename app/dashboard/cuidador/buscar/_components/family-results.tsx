@@ -11,12 +11,13 @@ import { InteresseButton } from "@/app/dashboard/cuidador/_components/interesse-
 import { getSharedCareTypes } from "@/lib/care-types";
 import type { FamilyForDisplay, RankedFamily } from "@/lib/matching";
 
-// Same length used for any other card-level bio truncation in the app
-// (there's no prior precedent to match -- this is the first card that
-// shows a bio -- so this is a fresh choice, not a reused constant): long
-// enough to give a real sense of what the family is looking for, short
-// enough that the card doesn't grow taller than its neighbors. Full text
-// is always one click away on the family's profile page.
+// Mesmo comprimento usado para qualquer outro truncamento de bio em nível
+// de card no app (não há precedente anterior para seguir -- este é o
+// primeiro card que mostra uma bio -- então essa é uma escolha nova, não
+// uma constante reaproveitada): longo o suficiente para dar uma noção real
+// do que a família procura, curto o suficiente para o card não crescer
+// mais alto que seus vizinhos. O texto completo está sempre a um clique de
+// distância na página de perfil da família.
 const BIO_PREVIEW_LENGTH = 120;
 
 function truncateBio(bio: string): string {
@@ -33,11 +34,11 @@ function formatHourlyBudget(hourlyBudget: number | null): string {
     : "Orçamento não informado";
 }
 
-// Only two sort options, not three like CaregiverResults -- FamilyForDisplay
-// carries no rating (families aren't reviewed), so a "Melhor avaliação"
-// pill would have nothing real to sort by. Fabricating one would break the
-// project's "never invent a number that looks real" rule (see CLAUDE.md
-// "Sistema de design").
+// Só duas opções de ordenação, não três como em CaregiverResults --
+// FamilyForDisplay não carrega nenhuma avaliação (famílias não são
+// avaliadas), então uma pílula "Melhor avaliação" não teria nada real para
+// ordenar. Inventar uma quebraria a regra do projeto de "nunca fabricar um
+// número que pareça real" (ver CLAUDE.md "Sistema de design").
 type SortKey = "matchScore" | "distance";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [

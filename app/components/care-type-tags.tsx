@@ -2,13 +2,14 @@ import { CareType } from "@prisma/client";
 
 import { CARE_TYPE_LABELS } from "@/lib/care-types";
 
-// Compact tags for a list of care types -- introduced to replace a redundant
-// "Busca cuidado para {tipos}" sentence on the family-search card
-// (app/dashboard/cuidador/buscar/_components/family-results.tsx), which
-// repeated information the bio right below it often already said in prose.
-// Reuses the same bg-primary-light/text-primary pill already used for
-// status/recommendation badges elsewhere (see CLAUDE.md "Sistema de
-// design") rather than introducing a new color pairing just for this.
+// Tags compactas para uma lista de tipos de cuidado -- introduzidas para
+// substituir a frase redundante "Busca cuidado para {tipos}" no card de
+// busca de famílias (app/dashboard/cuidador/buscar/_components/family-results.tsx),
+// que repetia informação que a bio logo abaixo dela frequentemente já dizia
+// em prosa. Reaproveita a mesma pílula bg-primary-light/text-primary já
+// usada por badges de status/recomendação em outros lugares (ver CLAUDE.md
+// "Sistema de design") em vez de introduzir uma combinação de cor nova só
+// para isso.
 export function CareTypeTags({ careTypes }: { careTypes: CareType[] }) {
   if (careTypes.length === 0) {
     return null;

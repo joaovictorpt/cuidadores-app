@@ -5,9 +5,10 @@ import "./globals.css";
 import { SiteHeader } from "@/app/components/site-header";
 import { siteConfig } from "@/lib/site-config";
 
-// Self-hosted via next/font (downloaded at build time, served from our own
-// domain — no runtime request to Google's CDN). See CLAUDE.md "Sistema de
-// design" for why these three specific fonts were chosen.
+// Self-hosted via next/font (baixadas em build time, servidas pelo nosso
+// próprio domínio — sem request em runtime para o CDN do Google). Ver
+// CLAUDE.md "Sistema de design" para o porquê dessas três fontes específicas
+// terem sido escolhidas.
 const sourceSerif4 = Source_Serif_4({
   variable: "--font-source-serif-4",
   subsets: ["latin", "latin-ext"],

@@ -19,9 +19,9 @@ export async function GET() {
     );
   }
 
-  // Same O(all families x all caregivers)-per-request caveat as the
-  // family-side route (app/api/matching/stable-match/route.ts) -- see the
-  // note there.
+  // Mesma ressalva de custo O(todas as famílias x todos os cuidadores) por
+  // requisição da rota do lado família (app/api/matching/stable-match/route.ts)
+  // -- ver a nota lá.
   const families = await findMatchedFamiliesForCaregiver(session.user.id);
 
   return NextResponse.json({ families });

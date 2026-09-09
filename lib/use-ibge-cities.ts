@@ -10,10 +10,10 @@ type UseIbgeCitiesResult = {
   error: string | null;
 };
 
-// Fetches the list of cities for a Brazilian state from IBGE's public API.
-// A network/API failure never throws -- it surfaces as `error` so callers
-// can fall back to a plain text input instead of leaving the city <select>
-// stuck and blocking the rest of the form.
+// Busca a lista de cidades de um estado brasileiro na API pública do IBGE.
+// Uma falha de rede/API nunca lança erro -- ela aparece como `error` para
+// que os chamadores possam recair num input de texto simples em vez de
+// deixar o <select> de cidade travado bloqueando o resto do formulário.
 export function useIbgeCities(uf: string): UseIbgeCitiesResult {
   const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);

@@ -79,8 +79,9 @@ export async function POST(request: Request) {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      // Race-condition safety net: two concurrent requests both passed the
-      // status/ownership checks above before either had committed a row.
+      // Rede de segurança contra race condition: duas requisições
+      // concorrentes passaram nas checagens de status/propriedade acima
+      // antes que qualquer uma delas tivesse confirmado uma linha.
       return NextResponse.json(
         { error: "Essa contratação já foi avaliada" },
         { status: 409 }

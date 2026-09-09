@@ -7,9 +7,10 @@ export type GeocodeResult = {
   longitude: number;
 };
 
-// Nominatim's usage policy caps requests at 1/second. Requests are chained
-// through this promise so concurrent calls from the same process are
-// serialized with at least MIN_INTERVAL_MS between them.
+// A política de uso do Nominatim limita as requisições a 1/segundo. As
+// requisições são encadeadas por essa promise para que chamadas
+// concorrentes do mesmo processo sejam serializadas com pelo menos
+// MIN_INTERVAL_MS de intervalo entre elas.
 let lastRequestAt = 0;
 let requestQueue: Promise<void> = Promise.resolve();
 

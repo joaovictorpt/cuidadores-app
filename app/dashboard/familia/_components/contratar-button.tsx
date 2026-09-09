@@ -17,10 +17,10 @@ export function ContratarButton({
 }) {
   const router = useRouter();
 
-  // Network/parse errors are left to throw -- HireActionWithCareType's
-  // submit() already wraps this call in try/catch and falls back to a
-  // generic connection-error message, so there's no need to duplicate that
-  // handling here.
+  // Erros de rede/parse são deixados para propagar (throw) -- o submit()
+  // de HireActionWithCareType já envolve essa chamada em try/catch e cai
+  // para uma mensagem genérica de erro de conexão, então não há
+  // necessidade de duplicar esse tratamento aqui.
   async function handleConfirm(careType: CareType): Promise<CreateHireResult> {
     const response = await fetch("/api/hires", {
       method: "POST",

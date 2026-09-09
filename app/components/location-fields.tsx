@@ -11,21 +11,23 @@ type LocationFieldsProps = {
   city: string;
   onStateChange: (state: string) => void;
   onCityChange: (city: string) => void;
-  // Cadastro forms require both fields; profile-edit forms don't (the PATCH
-  // endpoints' validation is untouched, still optional), so this controls
-  // both the `required` attribute and the visible RequiredMark.
+  // Formulários de cadastro exigem os dois campos; formulários de edição de
+  // perfil não (a validação dos endpoints PATCH continua intocada, ainda
+  // opcional), então isso controla tanto o atributo `required` quanto o
+  // RequiredMark visível.
   required: boolean;
 };
 
 const STATE_OPTIONS = BR_STATES.map((state) => ({ value: state.uf, label: state.name }));
 
-// Shared "Estado" + "Cidade" pair used by every form that collects an
-// address (cadastro and profile-edit, family and caregiver). Both are
-// searchable comboboxes (see app/components/combobox.tsx) rather than
-// native <select>s, so a long city list can be filtered by typing while
-// still only accepting a value that's actually in the list. City is
-// IBGE-backed and always resets when the state changes, since a city name
-// from the previous state is meaningless once the state changes.
+// Par compartilhado "Estado" + "Cidade" usado por todo formulário que coleta
+// um endereço (cadastro e edição de perfil, família e cuidador). Os dois são
+// comboboxes pesquisáveis (ver app/components/combobox.tsx) em vez de
+// <select>s nativos, para que uma lista longa de cidades possa ser filtrada
+// digitando, mas ainda assim só aceitando um valor que realmente esteja na
+// lista. Cidade é alimentada pelo IBGE e sempre reseta quando o estado muda,
+// já que um nome de cidade do estado anterior perde o sentido assim que o
+// estado muda.
 export function LocationFields({
   state,
   city,

@@ -5,10 +5,10 @@ import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-// Account icon button that opens a small dropdown ("Painel de controle",
-// "Sair") -- the only interactive part of site-header.tsx, split out into
-// its own Client Component so the header itself can stay a Server Component
-// (it just checks `session ? <AccountMenu /> : <Link>Entrar</Link>`).
+// Botão de ícone de conta que abre um pequeno dropdown ("Painel de controle",
+// "Sair") -- a única parte interativa de site-header.tsx, separada em seu
+// próprio Client Component para que o header em si possa continuar sendo um
+// Server Component (ele só checa `session ? <AccountMenu /> : <Link>Entrar</Link>`).
 export function AccountMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

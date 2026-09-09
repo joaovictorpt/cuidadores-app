@@ -10,9 +10,9 @@ import { prisma } from "@/lib/prisma";
 
 const EMAIL_PREFIX = "gale-shapley-test-";
 
-// All seed coordinates below are near Praça da Sé, São Paulo
-// (-23.5505, -46.6333), close enough together that every family is well
-// within matchingConfig.maxDistanceKm of every caregiver.
+// Todas as coordenadas seed abaixo ficam perto da Praça da Sé, São Paulo
+// (-23.5505, -46.6333), próximas o bastante para que toda família esteja
+// bem dentro do matchingConfig.maxDistanceKm de todo cuidador.
 
 type CaregiverSeed = {
   label: string;
@@ -32,10 +32,10 @@ type FamilySeed = {
   neededCareTypes: CareType[];
 };
 
-// 3 caregivers. X is deliberately the closest/cheapest/best-rated option
-// for most families, so it's everyone's natural top pick -- that's what
-// forces the capacity-driven rejections below (capacity is 3, but more
-// than 3 families will want X first).
+// 3 cuidadores. X é deliberadamente a opção mais próxima/barata/mais bem
+// avaliada para a maioria das famílias, então é a escolha natural número 1
+// de todo mundo -- é isso que força as rejeições por capacidade abaixo (a
+// capacidade é 3, mas mais de 3 famílias vão querer X primeiro).
 const CAREGIVER_SEEDS: CaregiverSeed[] = [
   {
     label: "X (perto, barato, bem avaliado -- o mais cobiçado)",
@@ -66,10 +66,11 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
   },
 ];
 
-// 4 families, all close to X, all needing something X covers -- so all 4
-// are expected to rank X first. With caregiverCapacity=3, at least one of
-// them MUST be rejected by X and fall back to their next choice. That's
-// the "não trivial" scenario the algorithm needs to resolve.
+// 4 famílias, todas perto de X, todas precisando de algo que X cobre --
+// então espera-se que todas as 4 classifiquem X em primeiro lugar. Com
+// caregiverCapacity=3, pelo menos uma delas PRECISA ser rejeitada por X e
+// cair para sua próxima escolha. Esse é o cenário "não trivial" que o
+// algoritmo precisa resolver.
 const FAMILY_SEEDS: FamilySeed[] = [
   {
     label: "Familia 1 (bem perto de X)",
@@ -124,10 +125,11 @@ async function seed() {
     familyUserIdByLabel.set(seed.label, user.id);
   }
 
-  // Reviews just need SOME valid family as the author to satisfy the
-  // Hire/Review schema's referential integrity -- which family authored
-  // them has no bearing on the matching computation, since ratings are
-  // aggregated per caregiver regardless of who wrote them.
+  // As reviews só precisam de ALGUMA família válida como autora para
+  // satisfazer a integridade referencial do schema Hire/Review -- qual
+  // família as escreveu não tem nenhum efeito no cálculo do matching, já
+  // que as avaliações são agregadas por cuidador independente de quem as
+  // escreveu.
   const reviewAuthorFamilyId = familyUserIdByLabel.values().next().value as string;
 
   for (const seed of CAREGIVER_SEEDS) {
@@ -188,16 +190,17 @@ async function cleanup() {
 }
 
 /**
- * Programmatic stability check for a many-to-one (hospital-residents)
- * matching. A matching has a "blocking pair" (proposer P, receiver R) if:
- *   - P prefers R over its current match (or P is unmatched and R is on
- *     P's preference list), AND
- *   - R finds P acceptable (P is on R's preference list), AND
- *   - R has a free slot, OR R prefers P over the worst proposer it
- *     currently holds.
- * If no blocking pair exists, the matching is stable by definition. This
- * re-derives stability directly from the preference lists rather than just
- * trusting the algorithm's own bookkeeping, so it's an independent check.
+ * Checagem programática de estabilidade para um matching many-to-one
+ * (hospital-residents). Um matching tem um "par bloqueante" (proponente P,
+ * receptor R) se:
+ *   - P prefere R ao seu match atual (ou P não tem match e R está na lista
+ *     de preferências de P), E
+ *   - R considera P aceitável (P está na lista de preferências de R), E
+ *   - R tem uma vaga livre, OU R prefere P ao pior proponente que já detém.
+ * Se nenhum par bloqueante existir, o matching é estável por definição.
+ * Isso re-deriva a estabilidade diretamente das listas de preferência em
+ * vez de simplesmente confiar no bookkeeping interno do próprio algoritmo,
+ * então é uma checagem independente.
  */
 function findBlockingPairs(
   proposers: string[],
@@ -227,12 +230,12 @@ function findBlockingPairs(
       if (receiverId === currentReceiverId) continue;
 
       const receiverRankForProposer = proposerPrefs.indexOf(receiverId);
-      if (receiverRankForProposer === -1) continue; // not on proposer's list
-      if (receiverRankForProposer >= currentRank) continue; // not an improvement
+      if (receiverRankForProposer === -1) continue; // não está na lista do proponente
+      if (receiverRankForProposer >= currentRank) continue; // não é uma melhora
 
       const receiverPrefs = receiverPreferences.get(receiverId) ?? [];
       const proposerRankForReceiver = receiverPrefs.indexOf(proposerId);
-      if (proposerRankForReceiver === -1) continue; // receiver finds proposer unacceptable
+      if (proposerRankForReceiver === -1) continue; // receptor considera o proponente inaceitável
 
       const held = matches.get(receiverId) ?? [];
 
@@ -261,10 +264,11 @@ async function main() {
     `Capacidade por cuidador (matchingConfig.caregiverCapacity): ${matchingConfig.caregiverCapacity}\n`
   );
 
-  // Re-fetch preference lists the same way runStableMatchingForAllFamilies
-  // does internally, purely so we can print them and feed them into the
-  // independent stability checker below (the checker must not just trust
-  // the algorithm's own internal state).
+  // Rebusca as listas de preferência do mesmo jeito que
+  // runStableMatchingForAllFamilies faz internamente, unicamente para que
+  // possamos imprimi-las e alimentá-las no verificador de estabilidade
+  // independente abaixo (o verificador não deve simplesmente confiar no
+  // estado interno do próprio algoritmo).
   const familyProfiles = await prisma.familyProfile.findMany({
     where: { userId: { in: Array.from(familyUserIdByLabel.values()) } },
   });
@@ -328,8 +332,8 @@ async function main() {
   console.log("\n=== runStableMatchingForAllFamilies ===\n");
   const result = await runStableMatchingForAllFamilies();
 
-  // The real result covers every family/caregiver in the DB; filter down
-  // to just our fictitious ones in case other data exists.
+  // O resultado real cobre toda família/cuidador do banco; filtra para
+  // ficar só com os nossos fictícios, caso exista outro dado no banco.
   const ourCaregiverIds = new Set(caregiverUserIdByLabel.values());
   const ourFamilyIds = new Set(familyUserIdByLabel.values());
 

@@ -3,19 +3,19 @@ import { CareType, HireInitiator, HireStatus, Role } from "@prisma/client";
 import { getSharedCareTypes } from "@/lib/care-types";
 import { prisma } from "@/lib/prisma";
 
-// Exercises Hire.careType end-to-end: real fictitious profiles created in
-// the database (same pattern as scripts/test-matching.ts -- own email
-// prefix, cleaned up at the end), and the exact same getSharedCareTypes +
-// `.includes(careType)` check that POST /api/hires runs server-side (see
-// app/api/hires/route.ts), rather than a literal authenticated HTTP round
-// trip -- consistent with how the other permanent test scripts in this
-// project validate lib logic directly instead of spinning up a server.
+// Exercita Hire.careType de ponta a ponta: perfis fictícios reais criados
+// no banco de dados (mesmo padrão de scripts/test-matching.ts -- prefixo de
+// email próprio, limpo ao final), e a mesma checagem getSharedCareTypes +
+// `.includes(careType)` que POST /api/hires roda no servidor (ver
+// app/api/hires/route.ts), em vez de um round trip HTTP autenticado literal
+// -- consistente com como os outros scripts de teste permanentes deste
+// projeto validam a lógica de lib direto, em vez de subir um servidor.
 const EMAIL_PREFIX = "hire-caretype-test-";
 
 async function seed() {
-  // Caregiver A: overlaps with the family on exactly one type (CHILD) --
-  // "single shared type" scenario, where the picker UI should skip
-  // straight to creating the Hire.
+  // Cuidador A: tem interseção com a família em exatamente um tipo (CHILD)
+  // -- cenário de "único tipo em comum", onde a UI do seletor deve pular
+  // direto para a criação do Hire.
   const caregiverSingleOverlap = await prisma.user.create({
     data: {
       email: `${EMAIL_PREFIX}cuidador-1tipo@example.com`,
@@ -26,9 +26,9 @@ async function seed() {
     },
   });
 
-  // Caregiver B: overlaps with the family on two types (ELDERLY, CHILD) --
-  // "multiple shared types" scenario, where the picker UI should expand a
-  // selection before creating the Hire.
+  // Cuidador B: tem interseção com a família em dois tipos (ELDERLY,
+  // CHILD) -- cenário de "múltiplos tipos em comum", onde a UI do seletor
+  // deve expandir uma seleção antes de criar o Hire.
   const caregiverMultiOverlap = await prisma.user.create({
     data: {
       email: `${EMAIL_PREFIX}cuidador-2tipos@example.com`,
@@ -111,7 +111,7 @@ async function main() {
   console.log(
     "\n=== Cenário 3: careType fora da interseção real (mesma checagem do servidor) ==="
   );
-  const invalidCareType = CareType.SPECIAL_NEEDS; // not in caregiverMultiProfile.careTypes
+  const invalidCareType = CareType.SPECIAL_NEEDS; // não está em caregiverMultiProfile.careTypes
   const wouldBeRejected = !sharedMulti.includes(invalidCareType);
   console.log(
     `Tentando "${invalidCareType}" contra o par com tipos em comum [${sharedMulti.join(", ")}]`
@@ -148,8 +148,8 @@ async function main() {
       initiatedBy: HireInitiator.FAMILY,
       status: HireStatus.PENDING,
       activeHireKey: `${family.id}:${caregiverMultiOverlap.id}`,
-      // careType intentionally omitted -- defaults to null, same as any
-      // Hire row created before this migration.
+      // careType omitido de propósito -- assume null por padrão, igual a
+      // qualquer linha de Hire criada antes desta migration.
     },
   });
   console.log(

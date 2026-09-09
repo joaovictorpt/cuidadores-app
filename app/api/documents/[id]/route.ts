@@ -46,9 +46,10 @@ export async function DELETE(
   }
 
   if (document.status !== VerificationStatus.PENDING) {
-    // No approval flow exists yet (see CLAUDE.md "Verificação de
-    // documentos"), so in practice every document is PENDING today -- this
-    // check is here so removal is correctly blocked once that flow exists.
+    // Ainda não existe fluxo de aprovação (ver CLAUDE.md "Verificação de
+    // documentos"), então na prática todo documento está PENDING hoje -- essa
+    // checagem está aqui para que a remoção seja corretamente bloqueada
+    // quando esse fluxo existir.
     return NextResponse.json(
       { error: "Este documento já foi analisado e não pode mais ser removido" },
       { status: 400 }

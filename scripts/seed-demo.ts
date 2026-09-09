@@ -10,12 +10,13 @@ import bcrypt from "bcryptjs";
 import { buildGeocodeQuery, geocodeAddress, GeocodeResult } from "@/lib/geocoding";
 import { prisma } from "@/lib/prisma";
 
-// Rough bounding box for the state of Goiás. All demo people live in the
-// Goiânia metro area, so any geocoding result landing outside this box is
-// necessarily a Nominatim disambiguation mistake (e.g. matching a
-// same-named neighborhood in a different state), not a real result -- this
-// is a sanity check specific to this demo dataset, not a general-purpose
-// concern of lib/geocoding.ts.
+// Caixa delimitadora aproximada do estado de Goiás. Todas as pessoas demo
+// vivem na região metropolitana de Goiânia, então qualquer resultado de
+// geocodificação que caia fora dessa caixa é necessariamente um erro de
+// desambiguação do Nominatim (ex.: casando com um bairro de mesmo nome em
+// outro estado), não um resultado real -- essa é uma checagem de sanidade
+// específica deste dataset de demonstração, não uma preocupação de
+// propósito geral de lib/geocoding.ts.
 const GOIAS_BOUNDS = {
   minLatitude: -19.5,
   maxLatitude: -12.5,
@@ -32,13 +33,14 @@ function isWithinGoiasBounds(result: GeocodeResult): boolean {
   );
 }
 
-// Tries each query in order (most specific first) and returns the first
-// result that both geocodes successfully AND passes the Goiás bounding-box
-// check. Smaller cities like Trindade/Aparecida de Goiânia aren't as densely
-// mapped in OSM as Goiânia itself, so an overly specific fictitious street +
-// house number sometimes yields no match at all -- falling back to a
-// broader (but still Goiás-qualified) query trades away some precision
-// rather than leaving the profile with no coordinates at all.
+// Tenta cada query em ordem (mais específica primeiro) e retorna o primeiro
+// resultado que tanto geocodifica com sucesso QUANTO passa na checagem da
+// caixa delimitadora de Goiás. Cidades menores como Trindade/Aparecida de
+// Goiânia não são mapeadas tão densamente no OSM quanto a própria Goiânia,
+// então uma rua + número fictícios excessivamente específicos às vezes não
+// retornam nenhum resultado -- cair para uma query mais ampla (mas ainda
+// qualificada como Goiás) troca um pouco de precisão em vez de deixar o
+// perfil sem nenhuma coordenada.
 async function geocodeWithSanityCheck(
   queries: string[],
   label: string
@@ -77,8 +79,9 @@ async function geocodeWithSanityCheck(
   return null;
 }
 
-// All demo accounts share this domain so cleanup() can find (and remove) them
-// by a single, unambiguous filter -- never delete real user data by accident.
+// Todas as contas demo compartilham esse domínio para que cleanup() consiga
+// encontrar (e remover) elas por um único filtro inequívoco -- nunca
+// apagando dados reais de usuário por acidente.
 const EMAIL_DOMAIN = "@demo.trevo.app";
 const DEMO_PASSWORD = "Demo@2026";
 const BCRYPT_SALT_ROUNDS = 12;
@@ -87,9 +90,9 @@ type CaregiverSeed = {
   email: string;
   name: string;
   phone: string;
-  // street/neighborhood exist only to build a specific geocoding query --
-  // CaregiverProfile has no address column, so these are never persisted,
-  // only city/state are.
+  // street/neighborhood existem só para montar uma query de geocodificação
+  // específica -- CaregiverProfile não tem coluna de endereço, então esses
+  // valores nunca são persistidos, só city/state são.
   street: string;
   neighborhood: string;
   city: string;
@@ -99,9 +102,9 @@ type CaregiverSeed = {
   hourlyRate: number;
   experienceYears: number;
   availabilityStatus: CaregiverAvailability;
-  // Optional, defaults to true (visible) when omitted -- only one seed
-  // caregiver sets this to false, to demonstrate the control actually
-  // hides them from family search/matching (see CLAUDE.md "Dados de
+  // Opcional, assume true (visível) quando omitido -- só um cuidador seed
+  // define isso como false, para demonstrar que o controle realmente o
+  // esconde da busca/matching da família (ver CLAUDE.md "Dados de
   // demonstração").
   visibleToFamilies?: boolean;
 };
@@ -115,27 +118,28 @@ type FamilySeed = {
   state: string;
   bio: string;
   neededCareTypes: CareType[];
-  // Optional, left undefined on one family on purpose -- exercises
-  // computePriceScore's neutral/relative fallback layers (no budget
-  // declared). See CLAUDE.md "Dados de demonstração".
+  // Opcional, deixado undefined numa família de propósito -- exercita as
+  // camadas de fallback neutro/relativo de computePriceScore (sem orçamento
+  // declarado). Ver CLAUDE.md "Dados de demonstração".
   hourlyBudget?: number;
-  // Optional, defaults to true (visible) when omitted -- only one seed
-  // family sets this to false, to demonstrate the control actually hides
-  // them from caregiver search/matching.
+  // Opcional, assume true (visível) quando omitido -- só uma família seed
+  // define isso como false, para demonstrar que o controle realmente a
+  // esconde da busca/matching do cuidador.
   visibleToCaregivers?: boolean;
 };
 
-// Real streets/neighborhoods in Goiânia and its metropolitan region, each
-// paired with a fictitious (but plausible) house number. Specific enough
-// that Nominatim doesn't have to guess between two different people who
-// happen to live in the same city, and that it doesn't confuse "Centro" or
-// "Setor X" with a same-named neighborhood in another state -- the queries
-// built in seedCaregivers/seedFamilies below also append "Goiás, Brasil"
-// explicitly for the same reason. 15 caregivers / 15 families spread across
-// six metro cities (Goiânia, Aparecida de Goiânia, Trindade, Senador
-// Canedo, plus Goianira and Bela Vista de Goiás added when the dataset grew
-// from 5/3 to 15/15) so distance actually varies meaningfully across search
-// results instead of everyone sitting a few km apart.
+// Ruas/bairros reais em Goiânia e sua região metropolitana, cada um pareado
+// com um número de casa fictício (mas plausível). Específico o bastante
+// para que o Nominatim não precise adivinhar entre duas pessoas diferentes
+// que moram na mesma cidade, e para que não confunda "Centro" ou "Setor X"
+// com um bairro de mesmo nome em outro estado -- as queries montadas em
+// seedCaregivers/seedFamilies abaixo também acrescentam "Goiás, Brasil"
+// explicitamente pelo mesmo motivo. 15 cuidadores / 15 famílias espalhados
+// por seis cidades da região metropolitana (Goiânia, Aparecida de Goiânia,
+// Trindade, Senador Canedo, mais Goianira e Bela Vista de Goiás
+// adicionadas quando o dataset cresceu de 5/3 para 15/15) para que a
+// distância realmente varie de forma significativa nos resultados de busca
+// em vez de todo mundo ficar a poucos km de distância.
 const CAREGIVER_SEEDS: CaregiverSeed[] = [
   {
     email: `cuidador1${EMAIL_DOMAIN}`,
@@ -206,8 +210,8 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
     hourlyRate: 60,
     experienceYears: 15,
     availabilityStatus: CaregiverAvailability.UNAVAILABLE,
-    // Demonstrates visibleToFamilies actually hiding a caregiver from
-    // family search/matching -- see CLAUDE.md "Dados de demonstração".
+    // Demonstra o visibleToFamilies realmente escondendo um cuidador da
+    // busca/matching da família -- ver CLAUDE.md "Dados de demonstração".
     visibleToFamilies: false,
   },
   {
@@ -335,8 +339,8 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
     hourlyRate: 65,
     experienceYears: 14,
     availabilityStatus: CaregiverAvailability.BUSY,
-    // Second caregiver (besides cuidador5/Elisa) demonstrating
-    // visibleToFamilies -- see CLAUDE.md "Dados de demonstração".
+    // Segundo cuidador (além de cuidador5/Elisa) demonstrando
+    // visibleToFamilies -- ver CLAUDE.md "Dados de demonstração".
     visibleToFamilies: false,
   },
   {
@@ -352,9 +356,9 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
     hourlyRate: 22,
     experienceYears: 2,
     availabilityStatus: CaregiverAvailability.UNAVAILABLE,
-    // Third caregiver demonstrating visibleToFamilies (see CLAUDE.md
-    // "Dados de demonstração") -- combined with UNAVAILABLE above, same
-    // "indisponível e fora de busca" narrative already used for cuidador5.
+    // Terceiro cuidador demonstrando visibleToFamilies (ver CLAUDE.md
+    // "Dados de demonstração") -- combinado com UNAVAILABLE acima, mesma
+    // narrativa "indisponível e fora de busca" já usada para cuidador5.
     visibleToFamilies: false,
   },
 ];
@@ -369,9 +373,9 @@ const FAMILY_SEEDS: FamilySeed[] = [
     state: "GO",
     bio: "Buscamos cuidador(a) para nossa mãe idosa, com mobilidade reduzida.",
     neededCareTypes: [CareType.ELDERLY],
-    // Below what the ELDERLY-capable caregivers charge (cuidador1 R$25,
-    // cuidador3 R$35, cuidador4 R$45) -- exercises computePriceScore's
-    // budget layer with the caregiver over budget.
+    // Abaixo do que os cuidadores capazes de ELDERLY cobram (cuidador1
+    // R$25, cuidador3 R$35, cuidador4 R$45) -- exercita a camada de
+    // orçamento de computePriceScore com o cuidador acima do orçamento.
     hourlyBudget: 20,
   },
   {
@@ -383,12 +387,13 @@ const FAMILY_SEEDS: FamilySeed[] = [
     state: "GO",
     bio: "Precisamos de apoio no cuidado dos nossos filhos gêmeos, período vespertino.",
     neededCareTypes: [CareType.CHILD],
-    // Above what every CHILD-capable caregiver charges (cuidador2 R$20,
-    // cuidador3 R$35, cuidador4 R$45, cuidador5 R$60) -- exercises
-    // computePriceScore's budget layer with every candidate within budget.
+    // Acima do que todo cuidador capaz de CHILD cobra (cuidador2 R$20,
+    // cuidador3 R$35, cuidador4 R$45, cuidador5 R$60) -- exercita a camada
+    // de orçamento de computePriceScore com todo candidato dentro do
+    // orçamento.
     hourlyBudget: 70,
-    // Demonstrates visibleToCaregivers actually hiding a family from
-    // caregiver search/matching -- see CLAUDE.md "Dados de demonstração".
+    // Demonstra o visibleToCaregivers realmente escondendo uma família da
+    // busca/matching do cuidador -- ver CLAUDE.md "Dados de demonstração".
     visibleToCaregivers: false,
   },
   {
@@ -452,8 +457,8 @@ const FAMILY_SEEDS: FamilySeed[] = [
     state: "GO",
     bio: "Família grande, buscamos cuidador(a) versátil para idosos, crianças e necessidades especiais.",
     neededCareTypes: [CareType.ELDERLY, CareType.CHILD, CareType.SPECIAL_NEEDS],
-    // Second family (besides família2/Souza) demonstrating
-    // visibleToCaregivers -- see CLAUDE.md "Dados de demonstração".
+    // Segunda família (além de família2/Souza) demonstrando
+    // visibleToCaregivers -- ver CLAUDE.md "Dados de demonstração".
     visibleToCaregivers: false,
   },
   {
@@ -497,7 +502,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
     state: "GO",
     bio: "Precisamos de apoio no cuidado do nosso filho recém-nascido.",
     neededCareTypes: [CareType.CHILD],
-    // Third family demonstrating visibleToCaregivers -- see CLAUDE.md
+    // Terceira família demonstrando visibleToCaregivers -- ver CLAUDE.md
     // "Dados de demonstração".
     visibleToCaregivers: false,
   },
@@ -535,29 +540,29 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
 ];
 
-// Indices into FAMILY_SEEDS / CAREGIVER_SEEDS. Deliberately concentrated on
-// just 3 families (Pereira, Souza, Ribeiro) x 3 caregivers (Ana Paula,
-// Bruno, Diego) -- the original showcase accounts from when the dataset was
-// 3 families/5 caregivers -- rather than spreading Hire history thinly
-// across all 15/15: a single login during the presentation has something
-// to show (Pereira and Ribeiro end up with 3 Hires each, Diego with 3,
-// Souza/Ana Paula/Bruno with 2 each), while the other 12 families and 12
-// caregivers added later have no Hire history at all, which is fine -- they
-// exist to populate search/matching results, not the contratações/
-// solicitações screens.
+// Índices em FAMILY_SEEDS / CAREGIVER_SEEDS. Deliberadamente concentrado em
+// só 3 famílias (Pereira, Souza, Ribeiro) x 3 cuidadores (Ana Paula, Bruno,
+// Diego) -- as contas de vitrine originais de quando o dataset era 3
+// famílias/5 cuidadores -- em vez de espalhar o histórico de Hire de forma
+// rala por todos os 15/15: um único login durante a apresentação tem algo
+// para mostrar (Pereira e Ribeiro acabam com 3 Hires cada, Diego com 3,
+// Souza/Ana Paula/Bruno com 2 cada), enquanto as outras 12 famílias e 12
+// cuidadores adicionados depois não têm nenhum histórico de Hire, o que é
+// normal -- eles existem para povoar resultados de busca/matching, não as
+// telas de contratações/solicitações.
 const HIRE_SEEDS: Array<{
   familyIndex: number;
   caregiverIndex: number;
   status: HireStatus;
-  // Must be within the real overlap between FAMILY_SEEDS[familyIndex]
-  // .neededCareTypes and CAREGIVER_SEEDS[caregiverIndex].careTypes -- same
-  // rule POST /api/hires enforces server-side (see CLAUDE.md "Tipo de
+  // Precisa estar dentro da interseção real entre FAMILY_SEEDS[familyIndex]
+  // .neededCareTypes e CAREGIVER_SEEDS[caregiverIndex].careTypes -- mesma
+  // regra que POST /api/hires aplica no servidor (ver CLAUDE.md "Tipo de
   // cuidado do Hire").
   careType: CareType;
-  // Who reached out first -- see CLAUDE.md "Fluxo de contratação (Hire)".
-  // Mostly FAMILY (matches the pre-Fase-2 default every existing seed Hire
-  // already had), with a few CAREGIVER ones among the new entries to
-  // exercise the "cuidador demonstrou interesse" direction too.
+  // Quem entrou em contato primeiro -- ver CLAUDE.md "Fluxo de contratação
+  // (Hire)". Majoritariamente FAMILY (bate com o padrão pré-Fase-2 que todo
+  // Hire seed existente já tinha), com alguns CAREGIVER entre os registros
+  // novos para exercitar também a direção "cuidador demonstrou interesse".
   initiatedBy: HireInitiator;
   message?: string;
   review?: { rating: number; comment: string };
@@ -600,11 +605,11 @@ const HIRE_SEEDS: Array<{
     initiatedBy: HireInitiator.FAMILY,
     message: "Precisaríamos de apoio adicional nos fins de semana, além do cuidado já combinado.",
   },
-  // A second, earlier Hire between the same pair as the first entry above
-  // (Pereira x Ana Paula) -- valid because both are terminal statuses
-  // (COMPLETED and REJECTED both leave activeHireKey null, so the unique
-  // constraint never sees a conflict): a first attempt that didn't work
-  // out, followed later by the successful one already seeded above.
+  // Um segundo Hire, anterior, entre o mesmo par do primeiro registro acima
+  // (Pereira x Ana Paula) -- válido porque ambos são status terminais
+  // (COMPLETED e REJECTED deixam activeHireKey null, então a constraint
+  // única nunca vê um conflito): uma primeira tentativa que não deu certo,
+  // seguida depois pela bem-sucedida já semeada acima.
   {
     familyIndex: 0,
     caregiverIndex: 0,
@@ -649,8 +654,8 @@ export async function cleanup() {
     },
   });
 
-  // Cascades to FamilyProfile/CaregiverProfile (and, through those,
-  // Document), Account and Session -- see prisma/schema.prisma.
+  // Propaga em cascata para FamilyProfile/CaregiverProfile (e, através
+  // deles, Document), Account e Session -- ver prisma/schema.prisma.
   const deleted = await prisma.user.deleteMany({
     where: { email: { endsWith: EMAIL_DOMAIN } },
   });
@@ -834,9 +839,10 @@ async function main() {
   printCredentialsTable();
 }
 
-// Guarded so that scripts/cleanup-demo.ts can `import { cleanup }` from this
-// file (to reuse the exact same logic) without also triggering a full seed
-// run as a side effect of the import.
+// Protegido para que scripts/cleanup-demo.ts consiga fazer
+// `import { cleanup }` deste arquivo (para reaproveitar exatamente a mesma
+// lógica) sem também disparar uma execução completa de seed como efeito
+// colateral do import.
 if (require.main === module) {
   main()
     .catch((error) => {

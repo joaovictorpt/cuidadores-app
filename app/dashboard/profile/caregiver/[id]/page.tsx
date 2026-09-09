@@ -9,10 +9,10 @@ import { formatCareTypes } from "@/lib/care-types";
 import { prisma } from "@/lib/prisma";
 import { calculateAverageRating } from "@/lib/reviews";
 
-// Read-only "who is this caregiver" page -- mirrors
-// app/dashboard/profile/family/[id]/page.tsx on the other side of the
-// marketplace. Same privacy rule applies: never `phone`, that's exclusive
-// to /dashboard/hires/[id] gated by Hire status.
+// Página somente-leitura "quem é esse cuidador" -- espelha
+// app/dashboard/profile/family/[id]/page.tsx do outro lado do marketplace.
+// A mesma regra de privacidade se aplica: nunca `phone`, isso é exclusivo
+// de /dashboard/hires/[id], condicionado ao status do Hire.
 export default async function CaregiverProfilePage({
   params,
 }: {
@@ -26,10 +26,10 @@ export default async function CaregiverProfilePage({
 
   const { id } = await params;
 
-  // Explicit `select` (not `include`) so `phone` never even reaches this
-  // Server Component's memory -- same structural-safety approach as
-  // FamilyForDisplay in lib/matching.ts (see CLAUDE.md "Busca de famílias
-  // pelo cuidador").
+  // `select` explícito (não `include`) para que `phone` nunca sequer
+  // chegue à memória deste Server Component -- mesma abordagem de
+  // segurança estrutural usada por FamilyForDisplay em lib/matching.ts
+  // (ver CLAUDE.md "Busca de famílias pelo cuidador").
   const caregiverProfile = await prisma.caregiverProfile.findUnique({
     where: { userId: id },
     select: {

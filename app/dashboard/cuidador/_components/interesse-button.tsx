@@ -8,12 +8,13 @@ import {
   HireActionWithCareType,
 } from "@/app/dashboard/_components/hire-action-with-care-type";
 
-// Caregiver-side mirror of app/dashboard/familia/_components/contratar-button.tsx --
-// same POST /api/hires call, but the caregiver is the one initiating here
-// (body carries `familyId`, not `caregiverId`), so the copy is "Tenho
-// interesse" rather than "Contratar": the caregiver is offering, not being
-// hired. Both delegate the "which care type is this Hire for" picker to
-// the same HireActionWithCareType.
+// Espelho, do lado do cuidador, de
+// app/dashboard/familia/_components/contratar-button.tsx -- mesma chamada
+// POST /api/hires, mas aqui é o cuidador quem inicia (o corpo carrega
+// `familyId`, não `caregiverId`), então o texto é "Tenho interesse" em vez
+// de "Contratar": o cuidador está se oferecendo, não sendo contratado. Os
+// dois delegam o seletor de "para qual tipo de cuidado é esse Hire" ao
+// mesmo HireActionWithCareType.
 export function InteresseButton({
   familyUserId,
   sharedCareTypes,
@@ -23,10 +24,10 @@ export function InteresseButton({
 }) {
   const router = useRouter();
 
-  // Network/parse errors are left to throw -- HireActionWithCareType's
-  // submit() already wraps this call in try/catch and falls back to a
-  // generic connection-error message, so there's no need to duplicate that
-  // handling here.
+  // Erros de rede/parse são deixados para lançar (throw) -- o submit() do
+  // HireActionWithCareType já envolve essa chamada em try/catch e cai para
+  // uma mensagem genérica de erro de conexão, então não há necessidade de
+  // duplicar esse tratamento aqui.
   async function handleConfirm(careType: CareType): Promise<CreateHireResult> {
     const response = await fetch("/api/hires", {
       method: "POST",

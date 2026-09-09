@@ -45,9 +45,9 @@ export function HireActionButton({
     }
   }
 
-  // "Aceitar" is the one action the design spec singles out as a CTA de
-  // destaque (like "Contratar") -- everything else (Recusar/Cancelar/
-  // Marcar como concluído) stays on the neutral secondary style.
+  // "Aceitar" é a única ação que o spec de design destaca como um CTA de
+  // destaque (como "Contratar") -- todas as outras (Recusar/Cancelar/
+  // Marcar como concluído) ficam no estilo secundário neutro.
   const buttonClass =
     targetStatus === HireStatus.ACCEPTED ? accentButtonClass : secondaryButtonClass;
 

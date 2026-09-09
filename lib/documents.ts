@@ -3,7 +3,7 @@ import type { DocumentType, VerificationStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CAREGIVER_DOCUMENTS_BUCKET, supabaseAdmin } from "@/lib/supabase-admin";
 
-// Server-only (transitively, via supabase-admin) -- see lib/supabase-admin.ts.
+// Só server-side (transitivamente, via supabase-admin) -- ver lib/supabase-admin.ts.
 
 const SIGNED_URL_EXPIRES_IN_SECONDS = 5 * 60;
 
@@ -16,8 +16,9 @@ export type DocumentWithSignedUrl = {
   signedUrl: string | null;
 };
 
-// Shared by GET /api/documents and app/dashboard/cuidador/documentos/page.tsx
-// so the signed-URL batching logic lives in exactly one place.
+// Compartilhado por GET /api/documents e
+// app/dashboard/cuidador/documentos/page.tsx para que a lógica de geração
+// em lote de signed URLs viva em um único lugar.
 export async function listCaregiverDocumentsWithSignedUrls(
   caregiverProfileId: string
 ): Promise<DocumentWithSignedUrl[]> {
@@ -30,8 +31,9 @@ export async function listCaregiverDocumentsWithSignedUrls(
     return [];
   }
 
-  // The bucket is private (documents are sensitive), so we never store or
-  // return a public URL -- only short-lived signed URLs generated on demand.
+  // O bucket é privado (documentos são dados sensíveis), então nunca
+  // armazenamos nem retornamos uma URL pública -- só signed URLs de curta
+  // duração geradas sob demanda.
   const { data: signedUrls } = await supabaseAdmin.storage
     .from(CAREGIVER_DOCUMENTS_BUCKET)
     .createSignedUrls(

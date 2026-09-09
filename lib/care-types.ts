@@ -1,10 +1,11 @@
 import { CareType } from "@prisma/client";
 
-// Single source of truth for CareType -> Portuguese label. Was previously
-// duplicated as a local const in every page/component that displayed care
-// types (buscar pages, match pages, their results components) -- extracted
-// here because the new profile/list-card work below adds several more call
-// sites, which would otherwise push the duplicate count into double digits.
+// Fonte única de CareType -> rótulo em português. Antes era duplicado como
+// uma const local em cada página/componente que exibia tipos de cuidado
+// (páginas de busca, páginas de match, seus componentes de resultado) --
+// extraído para cá porque o novo trabalho de perfil/card de lista abaixo
+// adiciona vários outros pontos de uso, o que empurraria a contagem de
+// duplicatas para dois dígitos.
 export const CARE_TYPE_LABELS: Record<CareType, string> = {
   ELDERLY: "Idosos",
   CHILD: "Crianças",
@@ -15,13 +16,13 @@ export function formatCareTypes(types: CareType[]): string {
   return types.map((type) => CARE_TYPE_LABELS[type] ?? type).join(", ");
 }
 
-// The real overlap between what a caregiver offers and what a family
-// needs -- single source of truth, previously duplicated inline as
+// A interseção real entre o que um cuidador oferece e o que uma família
+// precisa -- fonte única, antes duplicada inline como
 // `caregiver.careTypes.filter((type) => family.neededCareTypes.includes(type))`
-// (or the reverse) in several places across lib/matching.ts and, as of the
-// Hire.careType feature, the "which type is this Hire for" picker
-// (ContratarButton/InteresseButton) and its POST /api/hires server-side
-// validation.
+// (ou o inverso) em vários lugares dentro de lib/matching.ts e, desde a
+// funcionalidade Hire.careType, o seletor "para qual tipo é esse Hire"
+// (ContratarButton/InteresseButton) e sua validação server-side em
+// POST /api/hires.
 export function getSharedCareTypes(
   caregiverCareTypes: CareType[],
   familyNeededCareTypes: CareType[]

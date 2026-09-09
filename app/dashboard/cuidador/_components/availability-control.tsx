@@ -5,13 +5,15 @@ import { useState } from "react";
 
 import { AVAILABILITY_LABELS, AVAILABILITY_OPTIONS } from "@/lib/availability";
 
-// Quick status toggle for the caregiver dashboard -- deliberately NOT part
-// of the full profile edit form (profile-form.tsx), since this is meant to
-// be changed often and in one click, not buried behind "Editar perfil".
-// Same 3-pill pattern as the sort pills in CaregiverResults/FamilyResults
-// (active: bg-accent-light/text-accent, inactive: border-muted/40 bg-white)
-// -- reused rather than inventing a new toggle style. Saves via
-// PATCH /api/caregiver-profile, same endpoint the full profile form uses.
+// Alternador rápido de status para o dashboard do cuidador -- de propósito
+// NÃO faz parte do formulário completo de edição de perfil
+// (profile-form.tsx), já que a intenção é que isso seja alterado com
+// frequência e em um clique, não escondido atrás de "Editar perfil".
+// Mesmo padrão de 3 pílulas das pílulas de ordenação em
+// CaregiverResults/FamilyResults (ativa: bg-accent-light/text-accent,
+// inativa: border-muted/40 bg-white) -- reaproveitado em vez de inventar um
+// novo estilo de toggle. Salva via PATCH /api/caregiver-profile, o mesmo
+// endpoint que o formulário completo de perfil usa.
 export function AvailabilityControl({
   initialStatus,
 }: {

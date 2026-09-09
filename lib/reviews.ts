@@ -3,11 +3,11 @@ export type AverageRatingResult = {
   total: number;
 };
 
-// Single source of truth for "average rating from a list of ratings" --
-// previously computed inline (and identically) in both GET /api/reviews and
-// lib/matching.ts's caregiver scoring. `average` is null (not 0) when there
-// are no ratings yet, so callers never have to guess whether a 0 means "bad
-// rating" or "no reviews at all".
+// Fonte única de verdade para "nota média a partir de uma lista de notas" --
+// antes calculado inline (e de forma idêntica) tanto em GET /api/reviews
+// quanto na pontuação de cuidador de lib/matching.ts. `average` é null (não
+// 0) quando ainda não há notas, então os chamadores nunca precisam adivinhar
+// se um 0 significa "nota ruim" ou "nenhuma avaliação ainda".
 export function calculateAverageRating(ratings: number[]): AverageRatingResult {
   const total = ratings.length;
   const average =

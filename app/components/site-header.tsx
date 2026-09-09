@@ -13,18 +13,19 @@ const NAV_LINKS = [
   { href: "/#como-funciona", label: "Como funciona" },
 ];
 
-// Persistent top bar with the logo (linking back to "/") plus a
-// session-aware account affordance on the right -- present on every page,
-// including the home page itself now (see CLAUDE.md "Navegação" for why
-// this used to exclude "/" and no longer does).
+// Barra fina persistente no topo com a logo (linkando de volta para "/")
+// mais um recurso de conta sensível à sessão à direita -- presente em toda
+// página, incluindo a home page em si agora (ver CLAUDE.md "Navegação" para
+// o porquê disso antes excluir "/" e não excluir mais).
 //
-// Stays a Server Component: `getServerSession` here just decodes the JWT
-// from cookies (no DB round-trip, per the JWT session strategy documented
-// in CLAUDE.md "Autenticação"), so resolving the session server-side avoids
-// the client-side fetch-then-flash-of-"Entrar" that `useSession()` would
-// cause on first paint. Only the interactive dropdown itself
-// (open/close, click-outside, Escape) needs client state, so that part
-// alone is split out into app/components/account-menu.tsx.
+// Continua sendo um Server Component: `getServerSession` aqui só decodifica
+// o JWT a partir dos cookies (sem round-trip ao banco, conforme a
+// estratégia de sessão JWT documentada em CLAUDE.md "Autenticação"), então
+// resolver a sessão no servidor evita o fetch-e-depois-flash-de-"Entrar" no
+// cliente que `useSession()` causaria na primeira renderização. Só o
+// dropdown interativo em si (abrir/fechar, clique fora, Escape) precisa de
+// estado de cliente, então só essa parte foi separada em
+// app/components/account-menu.tsx.
 export async function SiteHeader() {
   const session = await getServerSession(authOptions);
 

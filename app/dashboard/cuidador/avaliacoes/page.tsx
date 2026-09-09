@@ -17,9 +17,9 @@ export default async function AvaliacoesPage() {
     redirect("/login");
   }
 
-  // review.authorId links to /dashboard/profile/family/[id] below -- only
-  // families write reviews today (see CLAUDE.md "Sistema de Review"), so
-  // authorId is always a family's User.id.
+  // review.authorId linka para /dashboard/profile/family/[id] abaixo --
+  // hoje só famílias escrevem reviews (ver CLAUDE.md "Sistema de Review"),
+  // então authorId é sempre o User.id de uma família.
   const reviews = await prisma.review.findMany({
     where: { targetId: session.user.id },
     include: { author: { select: { name: true } } },

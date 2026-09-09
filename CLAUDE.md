@@ -27,7 +27,11 @@ Site de contratação de cuidadores: um marketplace de dois lados conectando:
 ## Convenções de código
 
 - TypeScript em todo o projeto — nada de JavaScript puro.
-- Código e comentários em inglês. Explicações no chat podem ser em português.
+- Código (nomes de variáveis, funções, componentes, tipos, arquivos) permanece
+  em inglês. Comentários (`//` e `/** */`, incluindo JSDoc) são em português —
+  convenção trocada depois que todo o histórico de comentários do projeto foi
+  traduzido de inglês para português. Explicações no chat podem ser em
+  português.
 
 ## Notas para trabalho futuro
 

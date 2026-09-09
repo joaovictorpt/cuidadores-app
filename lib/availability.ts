@@ -1,19 +1,19 @@
 import { CaregiverAvailability } from "@prisma/client";
 
-// Single source of truth for CaregiverAvailability -> Portuguese label,
-// same pattern as CARE_TYPE_LABELS in lib/care-types.ts. Shared by the
-// read-only badge (app/components/availability-badge.tsx) and the
-// caregiver's own quick status control on the dashboard.
+// Fonte única de CaregiverAvailability -> rótulo em português, mesmo
+// padrão de CARE_TYPE_LABELS em lib/care-types.ts. Compartilhado pelo
+// selo somente-leitura (app/components/availability-badge.tsx) e pelo
+// controle rápido de status do próprio cuidador no dashboard.
 export const AVAILABILITY_LABELS: Record<CaregiverAvailability, string> = {
   AVAILABLE: "Disponível",
   BUSY: "Atendendo no momento",
   UNAVAILABLE: "Indisponível",
 };
 
-// Enum order used everywhere the three options are listed together (the
-// dashboard's status control) -- not necessarily the same order as declared
-// in prisma/schema.prisma, just the order that reads naturally to a
-// caregiver picking their own status.
+// Ordem do enum usada em todo lugar onde as três opções são listadas juntas
+// (o controle de status do dashboard) -- não necessariamente a mesma ordem
+// declarada em prisma/schema.prisma, só a ordem que soa mais natural para
+// um cuidador escolhendo o próprio status.
 export const AVAILABILITY_OPTIONS: CaregiverAvailability[] = [
   "AVAILABLE",
   "BUSY",

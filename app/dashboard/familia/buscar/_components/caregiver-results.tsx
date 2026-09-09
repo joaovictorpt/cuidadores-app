@@ -25,9 +25,9 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "matchScore", label: "Mais compatível" },
 ];
 
-// Reorders the already-fetched list client-side -- distance/rating/matchScore
-// all come back on every entry from rankCaregiversForFamily, so no new API
-// call is needed just to change the sort order.
+// Reordena a lista já carregada no lado do cliente -- distância/avaliação/
+// matchScore já vêm em cada item retornado por rankCaregiversForFamily,
+// então nenhuma chamada nova à API é necessária só para mudar a ordenação.
 function sortResults(results: RankedCaregiver[], sortKey: SortKey): RankedCaregiver[] {
   const sorted = [...results];
 
@@ -36,8 +36,9 @@ function sortResults(results: RankedCaregiver[], sortKey: SortKey): RankedCaregi
       sorted.sort((a, b) => a.distanceKm - b.distanceKm);
       break;
     case "rating":
-      // Caregivers with no reviews yet (averageRating === null) sort last,
-      // not first -- treating "no data" as "worst" would be misleading.
+      // Cuidadores sem nenhuma review ainda (averageRating === null) ficam
+      // por último na ordenação, não primeiro -- tratar "sem dado" como
+      // "pior nota" seria enganoso.
       sorted.sort(
         (a, b) =>
           (b.caregiver.averageRating ?? -1) - (a.caregiver.averageRating ?? -1)

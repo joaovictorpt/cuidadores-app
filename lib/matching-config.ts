@@ -7,7 +7,7 @@ export const matchingConfig = {
   },
   maxDistanceKm: 50,
   defaultRatingWhenNoReviews: 0.5,
-  // How many families a single caregiver can be simultaneously matched with
-  // in the stable matching (hospital-residents variant of Gale-Shapley).
+  // Quantas famílias um único cuidador pode ter simultaneamente no matching
+  // estável (variante hospital-residents do Gale-Shapley).
   caregiverCapacity: 3,
 };

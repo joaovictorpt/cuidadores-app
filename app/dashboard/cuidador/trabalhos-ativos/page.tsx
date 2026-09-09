@@ -11,9 +11,9 @@ import { prisma } from "@/lib/prisma";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { metaTextClass } from "@/lib/ui";
 
-// Filtered view of /dashboard/cuidador/solicitacoes showing only the
-// currently-in-progress relationships (status ACCEPTED) -- mirrors
-// /dashboard/familia/trabalhos-ativos on the other side of the graph.
+// Visão filtrada de /dashboard/cuidador/solicitacoes mostrando só os
+// relacionamentos atualmente em andamento (status ACCEPTED) -- espelha
+// /dashboard/familia/trabalhos-ativos do outro lado do grafo.
 export default async function TrabalhosAtivosPage() {
   const session = await getServerSession(authOptions);
 

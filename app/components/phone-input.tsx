@@ -10,11 +10,12 @@ type PhoneInputProps = {
   onChange: (value: string) => void;
 };
 
-// Masked (XX) XXXXX-XXXX Brazilian phone field, built on react-number-format
-// (see CLAUDE.md "Sistema de design") instead of a hand-rolled mask -- it
-// already handles caret position, backspacing through mask characters, and
-// blocking non-digit input correctly. `onChange` receives the unformatted
-// digits (`values.value`), which is what gets persisted/sent to the API.
+// Campo de telefone brasileiro mascarado (XX) XXXXX-XXXX, construído sobre o
+// react-number-format (ver CLAUDE.md "Sistema de design") em vez de uma
+// máscara escrita à mão -- ele já lida corretamente com a posição do cursor,
+// backspace sobre caracteres da máscara, e bloqueio de entrada que não seja
+// dígito. `onChange` recebe os dígitos sem formatação (`values.value`), que é
+// o que é persistido/enviado para a API.
 export function PhoneInput({ id, value, onChange }: PhoneInputProps) {
   return (
     <PatternFormat

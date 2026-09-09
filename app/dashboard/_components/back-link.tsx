@@ -7,17 +7,18 @@ type BackLinkProps = {
   label?: string;
 };
 
-// Discreet "back to dashboard" link -- the official pattern for returning
-// from any dashboard sub-page (see CLAUDE.md "Navegação de volta"). Every
-// dashboard page already knows the logged-in user's role server-side (via
-// getServerSession), so `href` is passed explicitly by the caller rather
-// than this component re-deriving it from a client-side session hook.
+// Link discreto "voltar ao dashboard" -- o padrão oficial para retornar
+// de qualquer subpágina do dashboard (ver CLAUDE.md "Navegação de volta").
+// Toda página de dashboard já sabe o role do usuário logado no servidor
+// (via getServerSession), então `href` é passado explicitamente pelo
+// chamador em vez deste componente redescobri-lo a partir de um hook de
+// sessão no cliente.
 //
-// Meant to sit as the very first element of a page's content, above the
-// <h1> -- same visual weight as the "← Voltar" link on the cadastro pages,
-// deliberately styled with secondaryButtonClass (not primaryButtonClass) so
-// it never competes with a screen's primary action button (Salvar,
-// Contratar, etc.).
+// Deve ficar como o primeiro elemento do conteúdo de uma página, acima do
+// <h1> -- mesmo peso visual do link "← Voltar" nas páginas de cadastro,
+// estilizado propositalmente com secondaryButtonClass (não
+// primaryButtonClass) para nunca competir com o botão de ação principal de
+// uma tela (Salvar, Contratar, etc.).
 export function BackLink({ href, label = "← Voltar" }: BackLinkProps) {
   return (
     <Link href={href} className={`${secondaryButtonClass} mb-6 inline-block`}>

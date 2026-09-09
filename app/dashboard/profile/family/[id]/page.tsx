@@ -7,13 +7,14 @@ import { authOptions } from "@/lib/auth";
 import { formatCareTypes } from "@/lib/care-types";
 import { prisma } from "@/lib/prisma";
 
-// Read-only "who is this family" page -- any logged-in user (either role)
-// can view it, no prior Hire required, since it only surfaces the same
-// info already shown on the search/match cards, just reorganized as its
-// own page. Deliberately never shows `address` or `phone`: those stay
-// exclusive to /dashboard/hires/[id], gated by Hire status (see CLAUDE.md
-// "Tela de detalhe de um Hire" and "Exposição condicional de telefone") --
-// this page is "who is this person", not "how do I contact them".
+// Página somente-leitura "quem é essa família" -- qualquer usuário logado
+// (de qualquer role) pode vê-la, sem exigir um Hire prévio, já que ela só
+// mostra a mesma informação já exibida nos cards de busca/match, apenas
+// reorganizada como uma página própria. Deliberadamente nunca mostra
+// `address` nem `phone`: esses ficam exclusivos a /dashboard/hires/[id],
+// condicionados ao status do Hire (ver CLAUDE.md "Tela de detalhe de um
+// Hire" e "Exposição condicional de telefone") -- esta página responde
+// "quem é essa pessoa", não "como eu a contato".
 export default async function FamilyProfilePage({
   params,
 }: {
@@ -27,10 +28,11 @@ export default async function FamilyProfilePage({
 
   const { id } = await params;
 
-  // Explicit `select` (not `include`) so `phone`/`address` never even reach
-  // this Server Component's memory, let alone risk being rendered by a
-  // future edit -- same structural-safety approach as FamilyForDisplay in
-  // lib/matching.ts (see CLAUDE.md "Busca de famílias pelo cuidador").
+  // `select` explícito (não `include`) para que `phone`/`address` nunca
+  // sequer cheguem à memória deste Server Component, nem corram o risco de
+  // serem renderizados por uma edição futura -- mesma abordagem de
+  // segurança estrutural usada por FamilyForDisplay em lib/matching.ts
+  // (ver CLAUDE.md "Busca de famílias pelo cuidador").
   const familyProfile = await prisma.familyProfile.findUnique({
     where: { userId: id },
     select: {

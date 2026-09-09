@@ -16,7 +16,7 @@ type CaregiverSeed = {
   ratings: number[];
 };
 
-// Reference point: Praça da Sé, São Paulo
+// Ponto de referência: Praça da Sé, São Paulo
 const FAMILY_LAT = -23.5505;
 const FAMILY_LON = -46.6333;
 
@@ -59,9 +59,10 @@ const CAREGIVER_SEEDS: CaregiverSeed[] = [
   },
 ];
 
-// Pure, no DB involved -- exercises all three computePriceScore fallback
-// layers directly (see lib/matching.ts for the layer order/reasoning),
-// independent of the weighted composite matchScore.
+// Pura, sem banco envolvido -- exercita diretamente as três camadas de
+// fallback de computePriceScore (ver lib/matching.ts para a ordem/
+// justificativa das camadas), independente do matchScore composto
+// ponderado.
 function testComputePriceScore() {
   console.log("=== computePriceScore (função pura, sem banco) ===\n");
 
@@ -89,14 +90,14 @@ function testComputePriceScore() {
   console.log(`\n${allPassed ? "Todas as checagens passaram." : "PELO MENOS UMA CHECAGEM FALHOU."}\n`);
 }
 
-// End-to-end scenario for the budget path (Camada 1), run through the real
-// rankCaregiversForFamily pipeline rather than computePriceScore in
-// isolation -- proves FamilyProfile.hourlyBudget actually flows from
-// Prisma through FamilyForMatching/computeMatchScore. Both caregivers sit
-// at the identical coordinates/careTypes/ratings as the family, so
-// distance/careType/rating score identically -- only their hourlyRate
-// (and therefore price score) differs, isolating the budget comparison's
-// effect on the final weighted matchScore.
+// Cenário ponta-a-ponta para o caminho de orçamento (Camada 1), executado
+// através do pipeline real de rankCaregiversForFamily em vez de
+// computePriceScore isolado -- prova que FamilyProfile.hourlyBudget
+// realmente flui do Prisma até FamilyForMatching/computeMatchScore. Os
+// dois cuidadores ficam nas mesmas coordenadas/careTypes/avaliações que a
+// família, então distância/careType/rating pontuam de forma idêntica --
+// só o hourlyRate deles (e, portanto, o price score) difere, isolando o
+// efeito da comparação de orçamento no matchScore ponderado final.
 async function seedBudgetScenario() {
   const familyUser = await prisma.user.create({
     data: {
@@ -273,12 +274,12 @@ async function main() {
       "\n"
   );
 
-  // Cleaned up here, before the second scenario's seed() call below --
-  // both scenarios reuse the same FAMILY_LAT/FAMILY_LON (and an
-  // overlapping ELDERLY careType), so if this scenario's caregivers were
-  // left in place they'd leak into the second scenario's candidate pool
-  // as spurious extra matches (caught by an earlier run of this script:
-  // "5 de 4 cuidadores criados").
+  // Limpo aqui, antes da chamada a seed() do segundo cenário abaixo --
+  // os dois cenários reaproveitam o mesmo FAMILY_LAT/FAMILY_LON (e um
+  // careType ELDERLY em comum), então se os cuidadores deste cenário
+  // ficassem no banco eles vazariam para o pool de candidatos do segundo
+  // cenário como matches espúrios extras (erro pego numa execução anterior
+  // deste script: "5 de 4 cuidadores criados").
   await cleanup();
 
   console.log("=== Seed: criando família + cuidadores fictícios ===\n");

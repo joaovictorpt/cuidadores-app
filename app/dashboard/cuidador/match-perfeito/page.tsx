@@ -10,11 +10,12 @@ import { authOptions } from "@/lib/auth";
 import { CARE_TYPE_LABELS, formatCareTypes } from "@/lib/care-types";
 import { findMatchedFamiliesForCaregiver } from "@/lib/matching";
 
-// Same reasoning as /dashboard/familia/match-recomendado's
-// STABLE_MATCH_VISUAL_SCORE: Gale-Shapley doesn't produce a 0-1
-// compatibility score, so ConnectionLine gets a fixed, fairly taut value
-// instead of a fabricated one -- a stable match is by construction the
-// best available pairing, so a near-straight line fits honestly.
+// Mesmo raciocínio do STABLE_MATCH_VISUAL_SCORE de
+// /dashboard/familia/match-recomendado: o Gale-Shapley não produz um score
+// de compatibilidade 0-1, então o ConnectionLine recebe um valor fixo e
+// razoavelmente tenso em vez de um valor fabricado -- um match estável é,
+// por construção, o melhor par disponível, então uma linha quase reta
+// reflete isso honestamente.
 const STABLE_MATCH_VISUAL_SCORE = 0.9;
 
 export default async function MatchPerfeitoPage() {

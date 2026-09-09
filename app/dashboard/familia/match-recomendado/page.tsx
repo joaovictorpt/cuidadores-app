@@ -12,13 +12,14 @@ import { findMatchedCaregiverForFamily } from "@/lib/matching";
 import { prisma } from "@/lib/prisma";
 import { calculateAverageRating } from "@/lib/reviews";
 
-// The Gale-Shapley stable match doesn't produce a 0-1 compatibility score
-// like the weighted search does (see lib/matching.ts) -- it's a categorical
-// "this is your matched caregiver" outcome. For the connection line's
-// curvature (which only exists to vary with a score) we use a fixed,
-// fairly taut value rather than computing a new score just for display:
-// a stable match is by construction the best available pairing for this
-// family, so a near-straight line fits without inventing new logic.
+// O matching estável do Gale-Shapley não produz um score de compatibilidade
+// 0-1 como a busca ponderada faz (ver lib/matching.ts) -- é um resultado
+// categórico do tipo "este é o seu cuidador designado". Para a curvatura da
+// linha de conexão (que só existe para variar com um score) usamos um valor
+// fixo e razoavelmente tenso em vez de calcular um score novo só para
+// exibição: um match estável é, por construção, o melhor pareamento
+// disponível para esta família, então uma linha quase reta se encaixa sem
+// precisar inventar lógica nova.
 const STABLE_MATCH_VISUAL_SCORE = 0.9;
 
 export default async function MatchRecomendadoPage() {

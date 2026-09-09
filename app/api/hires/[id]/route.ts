@@ -77,14 +77,16 @@ export async function PATCH(
     where: { id },
     data: {
       status: nextStatus,
-      // Release the uniqueness lock once the Hire reaches a terminal
-      // state, so this family-caregiver pair can start a new Hire later.
+      // Libera o lock de unicidade quando o Hire chega a um estado
+      // terminal, para que esse par família-cuidador possa iniciar um novo
+      // Hire depois.
       activeHireKey: TERMINAL_HIRE_STATUSES.includes(nextStatus)
         ? null
         : hire.activeHireKey,
-      // Real transition timestamps, used by /dashboard/hires/[id] to show
-      // the service duration -- only these two transitions matter for
-      // that, every other transition leaves both fields untouched.
+      // Timestamps reais de transição, usados por /dashboard/hires/[id]
+      // para mostrar a duração do serviço -- só essas duas transições
+      // importam para isso, qualquer outra transição deixa os dois campos
+      // intactos.
       ...(nextStatus === HireStatus.ACCEPTED ? { acceptedAt: new Date() } : {}),
       ...(nextStatus === HireStatus.COMPLETED ? { completedAt: new Date() } : {}),
     },

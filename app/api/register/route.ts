@@ -17,16 +17,17 @@ import { prisma } from "@/lib/prisma";
 
 const BCRYPT_SALT_ROUNDS = 12;
 
-// Shared by both branches: name/birthDate/phone/city/state are required for
-// everyone. `address` is family-only below -- CaregiverProfile has no
-// address column (see CLAUDE.md "Geolocalização"), so there's nothing to
-// require it against for caregivers.
+// Compartilhado pelos dois branches: name/birthDate/phone/city/state são
+// obrigatórios para todos. `address` é só da família abaixo --
+// CaregiverProfile não tem coluna de endereço (ver CLAUDE.md
+// "Geolocalização"), então não há o que exigir para cuidadores.
 const baseFields = {
   email: z.string().email("Email inválido"),
   password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres"),
   name: z.string().min(1, "Nome é obrigatório"),
-  // Order matters: an absurd date (e.g. a typo'd unbounded year) should
-  // surface as a range error, not a confusing "you must be 18+" message.
+  // A ordem importa: uma data absurda (ex.: um ano digitado errado, sem
+  // limite) deve aparecer como um erro de intervalo, não como a mensagem
+  // confusa "você precisa ter 18+".
   birthDate: z.coerce
     .date()
     .refine((date) => !isBirthDateInFuture(date), {
@@ -81,10 +82,11 @@ export async function POST(request: Request) {
   const data = parsed.data;
   const hashedPassword = await bcrypt.hash(data.password, BCRYPT_SALT_ROUNDS);
 
-  // Geocode before opening the Prisma transaction: Nominatim is rate-limited
-  // to 1 req/sec and can take a while to respond, and an interactive
-  // transaction has a short timeout — an external HTTP call inside it risks
-  // aborting the whole registration over a slow geocoding request.
+  // Geocodifica antes de abrir a transação do Prisma: o Nominatim tem limite
+  // de 1 requisição/seg e pode demorar para responder, e uma transação
+  // interativa tem um timeout curto — uma chamada HTTP externa dentro dela
+  // arrisca abortar todo o cadastro por causa de uma requisição de
+  // geocodificação lenta.
   const addressQuery =
     data.role === Role.FAMILY
       ? buildGeocodeQuery([data.address, data.city, data.state])

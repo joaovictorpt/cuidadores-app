@@ -42,10 +42,11 @@ export async function GET() {
   }
 
   if (familyProfile.neededCareTypes.length === 0) {
-    // Not a request-validation error (nothing was wrong with what the
-    // client sent) -- the family's own profile is missing data the search
-    // needs. `reason` lets callers tell this apart from other 400s (e.g.
-    // to show a "complete your profile" CTA instead of a generic message).
+    // Não é um erro de validação da requisição (não há nada de errado com
+    // o que o cliente enviou) -- é o próprio perfil da família que está
+    // sem um dado que a busca precisa. `reason` permite que quem chama
+    // diferencie isso de outros 400s (ex.: para mostrar um CTA "complete
+    // seu perfil" em vez de uma mensagem genérica).
     return NextResponse.json(
       {
         error:
@@ -65,8 +66,8 @@ export async function GET() {
     careTypes: caregiver.careTypes,
     averageRating: caregiver.averageRating,
     reviewCount: caregiver.reviewCount,
-    // Purely informational -- never used to filter/reorder, see
-    // CaregiverForMatching in lib/matching.ts.
+    // Puramente informativo -- nunca usado para filtrar/reordenar, ver
+    // CaregiverForMatching em lib/matching.ts.
     availabilityStatus: caregiver.availabilityStatus,
     distanceKm: Math.round(distanceKm * 10) / 10,
     matchScore: Math.round(matchScore * 1000) / 1000,

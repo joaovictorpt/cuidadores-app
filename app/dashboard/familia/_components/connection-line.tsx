@@ -1,15 +1,16 @@
-// Brand signature: a simple curved line joining two points, standing in
-// for família <-> cuidador. Purely decorative (aria-hidden) and deliberately
-// understated -- it should read as a small detail, not compete with the
-// card's actual content. The curve loosens or tightens with matchScore: a
-// stronger match pulls the line closer to straight ("tenser"), a weaker
-// match lets it sag more, as a light visual metaphor for connection
-// strength. No motion/animation here, so there's nothing that needs a
-// prefers-reduced-motion override.
+// Elemento de assinatura da marca: uma linha curva simples ligando dois
+// pontos, representando família <-> cuidador. Puramente decorativo
+// (aria-hidden) e deliberadamente discreto -- deve parecer um pequeno
+// detalhe, não competir com o conteúdo real do card. A curva afrouxa ou
+// aperta conforme o matchScore: um match mais forte puxa a linha pra mais
+// perto de uma reta ("mais tensa"), um match mais fraco deixa ela "cair"
+// mais, como uma metáfora visual leve de força de conexão. Sem
+// movimento/animação aqui, então não há nada que precise de um override de
+// prefers-reduced-motion.
 export function ConnectionLine({ matchScore }: { matchScore: number }) {
   const clampedScore = Math.min(1, Math.max(0, matchScore));
-  // At score 1 the control point sits almost on the straight line between
-  // the two dots; at score 0 it's pulled well above it.
+  // No score 1 o ponto de controle fica quase na linha reta entre os dois
+  // pontos; no score 0 ele é puxado bem acima dela.
   const sag = 10 * (1 - clampedScore);
   const controlY = 16 - sag;
 

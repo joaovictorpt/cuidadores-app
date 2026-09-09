@@ -97,7 +97,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ document }, { status: 201 });
   } catch (error) {
-    // Don't leave an orphaned file in storage if the DB insert failed.
+    // Não deixa um arquivo órfão no storage se o insert no banco falhar.
     await supabaseAdmin.storage.from(CAREGIVER_DOCUMENTS_BUCKET).remove([storagePath]);
     throw error;
   }

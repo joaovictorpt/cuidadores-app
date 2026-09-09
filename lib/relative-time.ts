@@ -5,11 +5,11 @@ const WEEK = 7 * DAY;
 const MONTH = 30 * DAY;
 const YEAR = 365 * DAY;
 
-// Discreet "há X" phrasing for Hire.createdAt in the contratações/
-// solicitações lists -- secondary metadata, not meant to compete with the
-// card's primary content, so a relative phrase reads faster than a full
-// date. Takes `now` as a parameter (defaulting to the real clock) so it
-// stays testable without mocking global Date.
+// Frase discreta "há X" para Hire.createdAt nas listas de contratações/
+// solicitações -- metadado secundário, não deve competir com o conteúdo
+// principal do card, então uma frase relativa se lê mais rápido que uma data
+// completa. Recebe `now` como parâmetro (padrão é o relógio real) para
+// continuar testável sem mockar o Date global.
 export function formatRelativeTime(date: Date, now: Date = new Date()): string {
   const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 

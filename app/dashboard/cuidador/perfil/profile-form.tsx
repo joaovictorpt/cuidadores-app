@@ -65,10 +65,10 @@ export function ProfileForm({ initialProfile }: { initialProfile: InitialProfile
     setStatus("idle");
     setMessage(null);
 
-    // Same completeness check as the registration forms (lib/phone.ts) --
-    // only when a phone was actually typed here, since this field is
-    // optional on edit (an empty value means "don't change it", see the
-    // `form.phone || undefined` below).
+    // Mesma checagem de completude dos formulários de cadastro
+    // (lib/phone.ts) -- só quando um telefone foi de fato digitado aqui,
+    // já que este campo é opcional na edição (um valor vazio significa
+    // "não alterar", ver `form.phone || undefined` abaixo).
     if (form.phone && !isCompletePhone(form.phone)) {
       setStatus("error");
       setMessage(PHONE_INVALID_MESSAGE);

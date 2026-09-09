@@ -7,14 +7,14 @@ import { authOptions } from "@/lib/auth";
 import { getSharedCareTypes } from "@/lib/care-types";
 import { prisma } from "@/lib/prisma";
 
-// Which id the request body carries depends on who's initiating: a family
-// reaching out names the caregiverId (their own id comes from the
-// session), a caregiver reaching out names the familyId instead. `careType`
-// is required on both -- which specific need this Hire is for, chosen by
-// the client from the real overlap between the two profiles (see
-// HireActionWithCareType) and re-validated against that same overlap
-// server-side below, since the client's list of options is only a UX
-// convenience, not a security boundary.
+// Qual id o corpo da requisição carrega depende de quem está iniciando: uma
+// família entrando em contato informa o caregiverId (o próprio id dela vem
+// da sessão), um cuidador entrando em contato informa o familyId. `careType`
+// é obrigatório nos dois casos -- qual necessidade específica motiva esse
+// Hire, escolhida pelo cliente a partir da interseção real entre os dois
+// perfis (ver HireActionWithCareType) e revalidada contra essa mesma
+// interseção no servidor abaixo, já que a lista de opções do cliente é só
+// uma conveniência de UX, não uma barreira de segurança.
 const createHireAsFamilySchema = z.object({
   caregiverId: z.string().min(1),
   careType: z.nativeEnum(CareType),
@@ -29,11 +29,12 @@ const createHireAsCaregiverSchema = z.object({
 
 const ACTIVE_HIRE_STATUSES: HireStatus[] = [HireStatus.PENDING, HireStatus.ACCEPTED];
 
-// Shared by both initiator paths below -- the "at most one active Hire per
-// family-caregiver pair" rule (app-level check here, activeHireKey unique
-// constraint as the race-condition safety net) doesn't care who initiates,
-// only which pair is involved, so this stays a single, un-duplicated code
-// path regardless of which side is creating the Hire.
+// Compartilhado pelos dois caminhos de iniciador abaixo -- a regra "no
+// máximo um Hire ativo por par família-cuidador" (checagem no nível da
+// aplicação aqui, constraint UNIQUE de activeHireKey como rede de
+// segurança contra race condition) não se importa com quem inicia, só com
+// qual par está envolvido, então isso permanece um único caminho de
+// código, sem duplicação, independente de qual lado está criando o Hire.
 async function createHire({
   familyId,
   caregiverId,
@@ -71,11 +72,11 @@ async function createHire({
         careType,
         message,
         status: HireStatus.PENDING,
-        // Locks this pair while active; released on any terminal
-        // transition (see lib/hire-transitions.ts / the [id] PATCH route).
-        // Keyed by the family-caregiver pair only, independent of
-        // initiatedBy -- the "one active request at a time" rule applies
-        // the same way regardless of who reached out first.
+        // Trava esse par enquanto ativo; liberado em qualquer transição
+        // terminal (ver lib/hire-transitions.ts / a rota PATCH [id]).
+        // Montada só a partir do par família-cuidador, independente de
+        // initiatedBy -- a regra "uma solicitação ativa por vez" vale da
+        // mesma forma independente de quem entrou em contato primeiro.
         activeHireKey: `${familyId}:${caregiverId}`,
       },
     });
@@ -86,8 +87,9 @@ async function createHire({
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      // Race-condition safety net: two concurrent requests both passed the
-      // findFirst check above before either had committed a row.
+      // Rede de segurança contra race condition: duas requisições
+      // concorrentes passaram na checagem findFirst acima antes que
+      // qualquer uma delas tivesse confirmado uma linha.
       return NextResponse.json(
         { error: "Já existe uma solicitação em andamento com esse cuidador" },
         { status: 409 }
@@ -147,10 +149,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Re-validated here, not just trusted from the client's dropdown -- the
-    // list of options ContratarButton shows is built from the same overlap
-    // (see getSharedCareTypes), but a direct API request could send
-    // anything.
+    // Revalidado aqui, não apenas confiado a partir do dropdown do cliente
+    // -- a lista de opções que o ContratarButton mostra é construída a
+    // partir da mesma interseção (ver getSharedCareTypes), mas uma
+    // requisição direta à API poderia enviar qualquer coisa.
     const sharedCareTypes = getSharedCareTypes(
       caregiverUser.caregiverProfile.careTypes,
       familyProfile.neededCareTypes
@@ -211,8 +213,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Same re-validation as the family branch above, mirrored -- see that
-    // comment.
+    // Mesma revalidação do branch de família acima, espelhada -- ver esse
+    // comentário.
     const sharedCareTypes = getSharedCareTypes(
       caregiverProfile.careTypes,
       familyUser.familyProfile.neededCareTypes

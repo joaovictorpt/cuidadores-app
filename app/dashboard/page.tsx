@@ -4,12 +4,13 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 
-// Role-agnostic dispatcher: gives anything that doesn't know the logged-in
-// user's role ahead of time (the header's account menu, links in emails,
-// etc.) a single stable URL to point at, instead of having to branch
-// client-side. Unauthenticated requests never reach this component --
-// middleware.ts's matcher includes the bare "/dashboard" route specifically
-// so the login redirect happens before this runs.
+// Despachante agnóstico de role: dá a qualquer coisa que não saiba de
+// antemão o role do usuário logado (o menu de conta do header, links em
+// emails, etc.) uma única URL estável para apontar, em vez de precisar
+// ramificar no cliente. Requisições sem sessão nunca chegam a este
+// componente -- o matcher do middleware.ts inclui a rota "/dashboard" pura
+// especificamente para que o redirecionamento de login aconteça antes
+// disso rodar.
 export default async function DashboardDispatcherPage() {
   const session = await getServerSession(authOptions);
 

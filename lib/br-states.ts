@@ -1,8 +1,8 @@
 export type BrState = { uf: string; name: string };
 
-// Fixed list of the 27 Brazilian federative units (26 states + DF) -- used
-// to populate the "Estado" <select> and to validate it server-side, so an
-// invalid/free-typed UF can never reach the database.
+// Lista fixa das 27 unidades federativas brasileiras (26 estados + DF) --
+// usada para popular o <select> de "Estado" e para validar server-side, de
+// modo que uma UF inválida/digitada livremente nunca chegue ao banco.
 export const BR_STATES: BrState[] = [
   { uf: "AC", name: "Acre" },
   { uf: "AL", name: "Alagoas" },
@@ -33,7 +33,7 @@ export const BR_STATES: BrState[] = [
   { uf: "TO", name: "Tocantins" },
 ];
 
-// z.enum() requires a non-empty tuple type, not a plain string[].
+// z.enum() exige um tipo de tupla não-vazia, não um string[] simples.
 export const BR_STATE_UFS = BR_STATES.map((state) => state.uf) as [
   string,
   ...string[],

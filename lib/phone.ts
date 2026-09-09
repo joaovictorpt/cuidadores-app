@@ -1,11 +1,11 @@
-// Single source of truth for "is this a complete Brazilian mobile phone",
-// shared by the Zod schemas in app/api/register, app/api/family-profile,
-// and app/api/caregiver-profile (authoritative check) and the 4 forms that
-// collect a phone via PhoneInput (client-side pre-submit check, same
-// pattern as lib/age.ts for birth date). PhoneInput's onChange already
-// hands back digits only (react-number-format's values.value), so this
-// only needs to check length -- 2-digit DDD + 9-digit number, the format a
-// Brazilian mobile number has.
+// Fonte única de verdade para "isto é um celular brasileiro completo",
+// compartilhada pelos schemas Zod em app/api/register, app/api/family-profile
+// e app/api/caregiver-profile (checagem autoritativa) e pelos 4 formulários
+// que coletam telefone via PhoneInput (checagem client-side antes do submit,
+// mesmo padrão de lib/age.ts para data de nascimento). O onChange do
+// PhoneInput já devolve só dígitos (values.value do react-number-format),
+// então isso só precisa checar o tamanho -- 2 dígitos de DDD + 9 dígitos do
+// número, o formato que um celular brasileiro tem.
 export const PHONE_DIGIT_LENGTH = 11;
 
 export const PHONE_REGEX = new RegExp(`^\\d{${PHONE_DIGIT_LENGTH}}$`);
@@ -17,20 +17,21 @@ export function isCompletePhone(digits: string): boolean {
   return PHONE_REGEX.test(digits);
 }
 
-// Strips anything but digits -- defensive belt for the two helpers below:
-// the app only ever stores digits-only phones (see PhoneInput), but these
-// build user-facing strings/URIs, so a stray formatting character slipping
-// through shouldn't produce a broken display value or wa.me link.
+// Remove tudo que não for dígito -- proteção defensiva para os dois helpers
+// abaixo: o app só armazena telefones só com dígitos (ver PhoneInput), mas
+// estes constroem strings/URIs voltadas ao usuário, então um caractere de
+// formatação perdido que passe não deveria produzir um valor de exibição ou
+// link wa.me quebrado.
 function sanitizePhoneDigits(phone: string): string {
   return phone.replace(/\D/g, "");
 }
 
-// Read-only display formatting ("(XX) XXXXX-XXXX") -- mirrors the mask
-// app/components/phone-input.tsx applies while typing, but for contexts
-// (Hire contact info) that only ever show an already-saved number, so
-// react-number-format's live-editing behavior isn't needed. Falls back to
-// the raw digits for anything that doesn't look like a complete phone,
-// rather than showing a malformed partial mask.
+// Formatação de exibição somente-leitura ("(XX) XXXXX-XXXX") -- espelha a
+// máscara que app/components/phone-input.tsx aplica durante a digitação, mas
+// para contextos (informação de contato do Hire) que só mostram um número já
+// salvo, então o comportamento de edição ao vivo do react-number-format não
+// é necessário. Cai nos dígitos crus para qualquer coisa que não pareça um
+// telefone completo, em vez de mostrar uma máscara parcial malformada.
 export function formatPhoneForDisplay(phone: string): string {
   const digits = sanitizePhoneDigits(phone);
 
@@ -41,8 +42,8 @@ export function formatPhoneForDisplay(phone: string): string {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
-// wa.me deep link -- same +55<digits> shape WhatsApp's own link format
-// requires, no punctuation.
+// Deep link do wa.me -- mesmo formato +55<dígitos> que o próprio formato de
+// link do WhatsApp exige, sem pontuação.
 export function buildWhatsAppUrl(phone: string): string {
   return `https://wa.me/55${sanitizePhoneDigits(phone)}`;
 }

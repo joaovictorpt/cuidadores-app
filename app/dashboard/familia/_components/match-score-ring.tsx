@@ -1,8 +1,9 @@
-// Circular progress ring showing a real 0-1 compatibility score as a
-// percentage. Unlike ConnectionLine (purely decorative, used where no real
-// score exists -- see CLAUDE.md "Sistema de design"), this component reads
-// as data: it's only meant for screens backed by an actual computeMatchScore
-// result (currently just /dashboard/familia/buscar).
+// Anel de progresso circular mostrando um score de compatibilidade real
+// 0-1 como porcentagem. Diferente de ConnectionLine (puramente decorativo,
+// usado onde não existe um score real -- ver CLAUDE.md "Sistema de
+// design"), este componente representa dado real: só deve ser usado em
+// telas respaldadas por um resultado real de computeMatchScore
+// (atualmente só /dashboard/familia/buscar).
 export function MatchScoreRing({ matchScore }: { matchScore: number }) {
   const clampedScore = Math.min(1, Math.max(0, matchScore));
   const percentage = Math.round(clampedScore * 100);

@@ -90,10 +90,10 @@ model FamilyProfile {
   longitude        Float?
   neededCareTypes  CareType[]
 
-  // Whether this family shows up when a caregiver browses/searches families
-  // or gets matched via Gale-Shapley (see lib/matching.ts findCandidateFamilies).
-  // Never affects this family's own search for caregivers -- visibility is
-  // one-directional, per side.
+  // Indica se esta família aparece quando um cuidador navega/busca famílias
+  // ou é casada via Gale-Shapley (ver lib/matching.ts findCandidateFamilies).
+  // Nunca afeta a própria busca desta família por cuidadores -- a
+  // visibilidade é direcional, por lado.
   visibleToCaregivers Boolean @default(true)
 
   createdAt        DateTime   @default(now())
@@ -116,14 +116,14 @@ model CaregiverProfile {
   latitude        Float?
   longitude       Float?
 
-  // Whether this caregiver shows up when a family browses/searches
-  // caregivers or gets matched via Gale-Shapley (see lib/matching.ts
-  // findCandidateCaregivers). Never affects this caregiver's own search for
-  // families -- visibility is one-directional, per side.
+  // Indica se este cuidador aparece quando uma família navega/busca
+  // cuidadores ou é casado via Gale-Shapley (ver lib/matching.ts
+  // findCandidateCaregivers). Nunca afeta a própria busca deste cuidador por
+  // famílias -- a visibilidade é direcional, por lado.
   visibleToFamilies  Boolean               @default(true)
-  // Purely informational -- shown as a badge wherever a caregiver is
-  // displayed to a family, never used to filter or reorder search/matching
-  // results (see lib/matching.ts).
+  // Puramente informativo -- exibido como um selo onde quer que um cuidador
+  // seja mostrado a uma família, nunca usado para filtrar ou reordenar
+  // resultados de busca/matching (ver lib/matching.ts).
   availabilityStatus CaregiverAvailability @default(AVAILABLE)
 
   documents       Document[]
@@ -179,39 +179,41 @@ model Hire {
   caregiver   User       @relation("HireCaregiver", fields: [caregiverId], references: [id])
 
   status      HireStatus @default(PENDING)
-  // Who reached out first -- determines which side is "proposing" (can
-  // withdraw a still-PENDING request) vs "responding" (can accept/reject
-  // it). See lib/hire-transitions.ts. Defaults to FAMILY so every Hire row
-  // created before this field existed (only families could initiate then)
-  // keeps its correct historical meaning without a data migration.
+  // Quem entrou em contato primeiro -- determina qual lado está "propondo"
+  // (pode desistir de um pedido ainda PENDING) vs. "respondendo" (pode
+  // aceitar/recusar). Ver lib/hire-transitions.ts. Padrão FAMILY para que
+  // toda linha de Hire criada antes deste campo existir (só famílias
+  // podiam iniciar até então) mantenha seu significado histórico correto
+  // sem uma migração de dados.
   initiatedBy HireInitiator @default(FAMILY)
   message     String?
   startDate   DateTime?
   endDate     DateTime?
 
-  // Which specific need this Hire is for, chosen from the real overlap
-  // between the two profiles' care types at creation time (see
-  // POST /api/hires). Nullable, not backfilled -- Hires created before this
-  // field existed simply show "Tipo não especificado" (see
-  // /dashboard/hires/[id]), same non-retroactive pattern already used for
-  // acceptedAt/completedAt above.
+  // Qual necessidade específica motivou este Hire, escolhida a partir da
+  // interseção real entre os tipos de cuidado dos dois perfis no momento da
+  // criação (ver POST /api/hires). Anulável, não retroativo -- Hires
+  // criados antes deste campo existir simplesmente mostram "Tipo não
+  // especificado" (ver /dashboard/hires/[id]), mesmo padrão não-retroativo
+  // já usado para acceptedAt/completedAt acima.
   careType    CareType?
 
-  // Real timestamps of the two state-machine transitions that matter for
-  // display (PENDING -> ACCEPTED, ACCEPTED -> COMPLETED), set by
-  // PATCH /api/hires/[id] -- never backfillable, so rows created before
-  // this field existed simply keep it null (see /dashboard/hires/[id],
-  // which shows "Duração não disponível" instead of guessing).
+  // Timestamps reais das duas transições de máquina de estados que importam
+  // para exibição (PENDING -> ACCEPTED, ACCEPTED -> COMPLETED), definidos
+  // por PATCH /api/hires/[id] -- nunca reconstruíveis retroativamente, então
+  // linhas criadas antes deste campo existir simplesmente ficam com null
+  // (ver /dashboard/hires/[id], que mostra "Duração não disponível" em vez
+  // de tentar adivinhar).
   acceptedAt  DateTime?
   completedAt DateTime?
 
-  // Set to "<familyId>:<caregiverId>" while status is PENDING or ACCEPTED,
-  // and cleared back to null on any terminal transition (REJECTED,
-  // COMPLETED, CANCELLED). Postgres unique indexes treat multiple NULLs as
-  // non-conflicting, so this enforces "at most one active Hire per
-  // family-caregiver pair" as a real DB constraint (not just an app-level
-  // check) while still allowing a new Hire to be created later once the
-  // previous one reaches a terminal state.
+  // Definido como "<familyId>:<caregiverId>" enquanto o status é PENDING ou
+  // ACCEPTED, e voltado para null em qualquer transição terminal (REJECTED,
+  // COMPLETED, CANCELLED). Índices únicos do Postgres tratam múltiplos NULL
+  // como não-conflitantes, então isso garante "no máximo um Hire ativo por
+  // par família-cuidador" como uma constraint real de banco (não só uma
+  // checagem no nível da aplicação), permitindo ainda que um novo Hire seja
+  // criado depois que o anterior chegar a um estado terminal.
   activeHireKey String?  @unique
 
   review      Review?

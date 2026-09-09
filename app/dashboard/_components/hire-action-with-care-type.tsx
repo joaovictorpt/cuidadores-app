@@ -15,22 +15,24 @@ export type CreateHireResult =
   | { ok: true }
   | { ok: false; status?: number; error?: string };
 
-// Shared by ContratarButton (family initiating) and InteresseButton
-// (caregiver initiating) -- the two are otherwise near-identical mirrors of
-// each other (see their own files), so the "pick which shared care type
-// this Hire is for" UI lives here once instead of being written twice.
+// Compartilhado por ContratarButton (família iniciando) e InteresseButton
+// (cuidador iniciando) -- os dois são, fora isso, espelhos quase idênticos
+// um do outro (ver seus próprios arquivos), então a UI de "escolher qual
+// tipo de cuidado em comum é esse Hire" vive aqui uma vez só, em vez de ser
+// escrita duas vezes.
 //
-// Behavior: `sharedCareTypes` is always the real overlap between the two
-// profiles involved (computed by the caller, which already has both sides'
-// care types in scope -- see lib/care-types.ts's getSharedCareTypes).
-//  - Exactly 1 shared type: nothing to ask, clicking the button submits
-//    immediately with that type.
-//  - More than 1: clicking expands an inline radio picker + "Confirmar";
-//    the POST only fires once a type is chosen and confirmed.
-//  - 0: shouldn't happen for any real caller (matching's isEligiblePair
-//    already requires overlap for a pair to be shown at all), but the
-//    button stays disabled with an explanatory message instead of assuming
-//    it can't occur.
+// Comportamento: `sharedCareTypes` é sempre a interseção real entre os dois
+// perfis envolvidos (calculada pelo chamador, que já tem os tipos de
+// cuidado dos dois lados em escopo -- ver getSharedCareTypes em
+// lib/care-types.ts).
+//  - Exatamente 1 tipo em comum: nada a perguntar, clicar no botão envia
+//    imediatamente com esse tipo.
+//  - Mais de 1: clicar expande um seletor de radio inline + "Confirmar";
+//    o POST só é disparado depois que um tipo é escolhido e confirmado.
+//  - 0: não deveria acontecer com nenhum chamador real (o isEligiblePair do
+//    matching já exige overlap para um par sequer ser mostrado), mas o
+//    botão fica desabilitado com uma mensagem explicativa em vez de supor
+//    que isso não pode ocorrer.
 export function HireActionWithCareType({
   label,
   sharedCareTypes,

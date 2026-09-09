@@ -1,29 +1,29 @@
 import { HireInitiator, HireStatus, Role } from "@prisma/client";
 
-// Single source of truth for the Hire state machine, shared by the PATCH
-// API route (enforcement) and the dashboard pages (deciding which action
-// buttons to render) so the two can never drift apart.
+// Fonte única de verdade para a máquina de estados do Hire, compartilhada pela
+// rota de API PATCH (aplicação das regras) e pelas páginas do dashboard
+// (decidindo quais botões de ação renderizar), para que as duas nunca divirjam.
 //
-// Which role can act on a PENDING Hire depends on who initiated it: the
-// side that reached out first is "proposing" (they're the only one who can
-// withdraw it before it's answered) and the other side is "responding"
-// (they're the only one who can accept/reject it) -- see CLAUDE.md
-// "Fluxo de contratação (Hire)" for the full table.
+// Qual papel pode agir sobre um Hire PENDING depende de quem o iniciou: o
+// lado que entrou em contato primeiro está "propondo" (é o único que pode
+// desistir antes de ser respondido) e o outro lado está "respondendo"
+// (é o único que pode aceitar/recusar) -- ver CLAUDE.md
+// "Fluxo de contratação (Hire)" para a tabela completa.
 //
-//   Initiated by FAMILY:
-//     PENDING  -> ACCEPTED   (only the caregiver, responding)
-//     PENDING  -> REJECTED   (only the caregiver, responding)
-//     PENDING  -> CANCELLED  (only the family, proposer withdrawing)
-//   Initiated by CAREGIVER:
-//     PENDING  -> ACCEPTED   (only the family, responding)
-//     PENDING  -> REJECTED   (only the family, responding)
-//     PENDING  -> CANCELLED  (only the caregiver, proposer withdrawing)
-//   Either way, once ACCEPTED:
-//     ACCEPTED -> COMPLETED  (only the caregiver -- they're the one
-//                             providing care, regardless of who initiated)
-//     ACCEPTED -> CANCELLED  (only the family -- they're the one receiving
-//                             care, regardless of who initiated)
-// Every other transition is invalid.
+//   Iniciado pela FAMÍLIA:
+//     PENDING  -> ACCEPTED   (só o cuidador, respondendo)
+//     PENDING  -> REJECTED   (só o cuidador, respondendo)
+//     PENDING  -> CANCELLED  (só a família, propositora desistindo)
+//   Iniciado pelo CUIDADOR:
+//     PENDING  -> ACCEPTED   (só a família, respondendo)
+//     PENDING  -> REJECTED   (só a família, respondendo)
+//     PENDING  -> CANCELLED  (só o cuidador, propositor desistindo)
+//   De qualquer forma, uma vez ACCEPTED:
+//     ACCEPTED -> COMPLETED  (só o cuidador -- é ele quem presta o
+//                             cuidado, independente de quem iniciou)
+//     ACCEPTED -> CANCELLED  (só a família -- é ela quem recebe o
+//                             cuidado, independente de quem iniciou)
+// Qualquer outra transição é inválida.
 const ACCEPTED_TRANSITIONS: Partial<Record<HireStatus, Role[]>> = {
   [HireStatus.COMPLETED]: [Role.CAREGIVER],
   [HireStatus.CANCELLED]: [Role.FAMILY],
@@ -59,9 +59,9 @@ export const VALID_HIRE_TRANSITIONS: Record<
   },
 };
 
-// Statuses from which a Hire can never transition again. Reaching one of
-// these releases the activeHireKey lock (see prisma/schema.prisma), which
-// is what allows the same family-caregiver pair to start a new Hire later.
+// Status a partir dos quais um Hire nunca mais pode transicionar. Alcançar
+// um deles libera o lock do activeHireKey (ver prisma/schema.prisma), que é
+// o que permite ao mesmo par família-cuidador iniciar um novo Hire depois.
 export const TERMINAL_HIRE_STATUSES: HireStatus[] = [
   HireStatus.REJECTED,
   HireStatus.COMPLETED,
@@ -79,9 +79,9 @@ export function isValidHireTransition(
   return Boolean(allowedRoles && allowedRoles.includes(role));
 }
 
-// Which target statuses the given role is allowed to move this Hire to
-// from its current status -- used by the dashboard pages to decide which
-// action buttons to show.
+// Para quais status de destino o papel informado pode mover este Hire a
+// partir do status atual -- usado pelas páginas do dashboard para decidir
+// quais botões de ação mostrar.
 export function getAvailableActions(
   currentStatus: HireStatus,
   role: Role,

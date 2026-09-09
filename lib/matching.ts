@@ -23,14 +23,14 @@ export type CaregiverForMatching = {
   longitude: number | null;
   averageRating: number | null;
   reviewCount: number;
-  // Whether this caregiver should show up when a family searches/matches --
-  // enforced in findCandidateCaregivers, never in isEligiblePair (see that
-  // function's comment for why: isEligiblePair's `caregiver` argument plays
-  // different roles -- fixed searcher vs. candidate -- depending on which
-  // direction of the graph is calling it).
+  // Se este cuidador deve aparecer quando uma família busca/faz matching --
+  // aplicado em findCandidateCaregivers, nunca em isEligiblePair (ver o
+  // comentário dessa função para o porquê: o argumento `caregiver` de
+  // isEligiblePair assume papéis diferentes -- buscador fixo vs. candidato --
+  // dependendo de qual direção do grafo está chamando).
   visibleToFamilies: boolean;
-  // Purely informational -- carried through search/matching results for
-  // display, never read by isEligiblePair/computeMatchScore.
+  // Puramente informativo -- carregado através dos resultados de busca/matching
+  // para exibição, nunca lido por isEligiblePair/computeMatchScore.
   availabilityStatus: CaregiverAvailability;
 };
 
@@ -39,16 +39,16 @@ export type FamilyForMatching = {
   longitude: number | null;
   neededCareTypes: CareType[];
   hourlyBudget: number | null;
-  // Mirrors CaregiverForMatching.visibleToFamilies on the other side of the
-  // graph -- enforced in findCandidateFamilies.
+  // Espelha CaregiverForMatching.visibleToFamilies do outro lado do
+  // grafo -- aplicado em findCandidateFamilies.
   visibleToCaregivers: boolean;
 };
 
-// Same as FamilyForMatching, but carrying an identity (the User id) so it
-// can be used as a proposer/receiver-preference key. rankCaregiversForFamily
-// doesn't need this (it only ever handles one family at a time), but the
-// preference-building functions below rank many families against each
-// other, so they need something to tell them apart.
+// Igual a FamilyForMatching, mas carregando uma identidade (o id do User) para
+// que possa ser usado como chave de preferência de proposer/receiver.
+// rankCaregiversForFamily não precisa disso (só lida com uma família por vez),
+// mas as funções de construção de preferências abaixo ranqueiam várias
+// famílias umas contra as outras, então precisam de algo para distingui-las.
 export type FamilyCandidate = FamilyForMatching & {
   userId: string;
 };
@@ -59,10 +59,10 @@ export type RankedCaregiver = {
   matchScore: number;
 };
 
-// FamilyCandidate plus the fields needed to actually show a family to a
-// caregiver (rankFamiliesForCaregiver / GET /api/search/families). Notably
-// missing: `address` -- full street address is never exposed to a
-// caregiver browsing/matched-with families, only city/state (see CLAUDE.md
+// FamilyCandidate mais os campos necessários para de fato mostrar uma família
+// a um cuidador (rankFamiliesForCaregiver / GET /api/search/families). Falta
+// notável: `address` -- o endereço completo nunca é exposto a um cuidador
+// navegando/com match entre famílias, só cidade/estado (ver CLAUDE.md
 // "Busca de famílias pelo cuidador").
 export type FamilyForDisplay = FamilyCandidate & {
   name: string | null;
@@ -77,11 +77,12 @@ export type RankedFamily<F extends FamilyCandidate = FamilyCandidate> = {
   matchScore: number;
 };
 
-// Null-safe Haversine wrapper -- coordinates are always optional (Float?)
-// on both profile models, so any caller working with a raw Prisma record
-// (rather than an already-validated matching candidate) needs this guard.
-// Used by the "matched pair" lookups below, whose distanceKm is display-only
-// and thus allowed to be "not available" instead of throwing.
+// Wrapper de Haversine null-safe -- coordenadas são sempre opcionais (Float?)
+// nos dois models de profile, então qualquer chamador trabalhando com um
+// registro Prisma bruto (em vez de um candidato de matching já validado)
+// precisa dessa proteção. Usado pelas buscas de "par com match" abaixo, cujo
+// distanceKm é somente para exibição e por isso pode ser "não disponível" em
+// vez de lançar erro.
 function distanceKmOrNull(
   aLat: number | null | undefined,
   aLon: number | null | undefined,
@@ -95,22 +96,22 @@ function distanceKmOrNull(
   return haversineDistanceKm(aLat, aLon, bLat, bLon);
 }
 
-// Shared eligibility rule, used both when a family is looking for
-// caregivers and when a caregiver is looking for families: both directions
-// of the bipartite graph must agree on which edges exist at all, otherwise
-// the two sides' preference lists wouldn't even be talking about the same
-// set of possible pairs.
+// Regra de elegibilidade compartilhada, usada tanto quando uma família está
+// procurando cuidadores quanto quando um cuidador está procurando famílias:
+// as duas direções do grafo bipartido precisam concordar sobre quais arestas
+// existem, senão as listas de preferência dos dois lados nem estariam
+// falando do mesmo conjunto de pares possíveis.
 //
-// Deliberately doesn't check visibleToFamilies/visibleToCaregivers here,
-// even though both arguments carry those flags: this function is called
-// with the searching side's OWN profile as one argument and a list
-// candidate as the other (see findCandidateCaregivers/findCandidateFamilies
-// below), and which argument is "the searcher" vs. "the candidate" flips
-// depending on direction. Checking a flag here would incorrectly filter
-// based on the searcher's own visibility setting in one of the two
-// directions. The visibility checks live in the two wrapper functions
-// instead, where only the candidate list (never the fixed searcher) is
-// filtered.
+// Deliberadamente NÃO checa visibleToFamilies/visibleToCaregivers aqui,
+// mesmo que os dois argumentos carreguem essas flags: esta função é chamada
+// com o PRÓPRIO profile do lado que está buscando como um argumento e um
+// candidato de uma lista como o outro (ver findCandidateCaregivers/
+// findCandidateFamilies abaixo), e qual argumento é "o buscador" vs. "o
+// candidato" se inverte conforme a direção. Checar uma flag aqui filtraria
+// incorretamente com base na própria configuração de visibilidade do
+// buscador, em uma das duas direções. As checagens de visibilidade vivem,
+// em vez disso, nas duas funções wrapper, onde só a lista de candidatos
+// (nunca o buscador fixo) é filtrada.
 function isEligiblePair(
   familyProfile: FamilyForMatching,
   caregiver: CaregiverForMatching
@@ -150,11 +151,11 @@ export function findCandidateCaregivers(
   );
 }
 
-// Generic over F so it works both with the minimal FamilyCandidate (Gale-
-// Shapley preference building, which only needs the userId back) and with
-// richer display-oriented shapes like FamilyForDisplay (rankFamiliesForCaregiver,
-// which also needs name/city/state to show) -- the filter preserves
-// whatever shape it's given.
+// Genérica sobre F para funcionar tanto com o FamilyCandidate mínimo
+// (construção de preferências do Gale-Shapley, que só precisa do userId de
+// volta) quanto com formas mais ricas orientadas a exibição como
+// FamilyForDisplay (rankFamiliesForCaregiver, que também precisa mostrar
+// name/city/state) -- o filtro preserva qualquer forma que receber.
 export function findCandidateFamilies<F extends FamilyForMatching>(
   caregiver: CaregiverForMatching,
   allFamilies: F[]
@@ -165,21 +166,22 @@ export function findCandidateFamilies<F extends FamilyForMatching>(
   );
 }
 
-// Three-layer fallback, in priority order:
-//  1. The family declared a real `hourlyBudget` -- compare the caregiver's
-//     actual rate against it. At or under budget scores a perfect 1.0;
-//     over budget decays linearly and floors at 0 once the rate is double
-//     the budget (rate - budget >= budget). This is the only layer that
-//     reflects what the family actually said they can afford.
-//  2. No budget declared, but the caller supplied a pool of other
-//     candidates' rates -- fall back to the previous behavior (relative
-//     min/max normalization within that pool), so a caregiver's price
-//     score still says *something* ("cheap relative to the alternatives")
-//     even without a stated budget.
-//  3. Neither -- nothing to compare against, so the price component can't
-//     discriminate at all. Reuses matchingConfig.defaultRatingWhenNoReviews
-//     rather than a separate magic constant, since it means the same thing
-//     structurally: "no data, so don't penalize or reward, stay neutral."
+// Fallback de três camadas, em ordem de prioridade:
+//  1. A família declarou um `hourlyBudget` real -- compara a tarifa real do
+//     cuidador contra ele. Dentro do orçamento ou abaixo pontua um 1.0
+//     perfeito; acima do orçamento decai linearmente e satura em 0 quando a
+//     tarifa é o dobro do orçamento (rate - budget >= budget). Esta é a
+//     única camada que reflete o que a família de fato disse que pode pagar.
+//  2. Sem orçamento declarado, mas o chamador forneceu um pool de tarifas de
+//     outros candidatos -- volta ao comportamento anterior (normalização
+//     relativa min/max dentro desse pool), então o price score de um
+//     cuidador ainda diz *alguma coisa* ("barato em relação às
+//     alternativas") mesmo sem um orçamento declarado.
+//  3. Nenhum dos dois -- nada contra o que comparar, então o componente de
+//     preço não consegue discriminar nada. Reaproveita
+//     matchingConfig.defaultRatingWhenNoReviews em vez de uma constante
+//     mágica separada, já que significa a mesma coisa estruturalmente:
+//     "sem dado, então não penalizar nem premiar, ficar neutro."
 export function computePriceScore(
   caregiverRate: number | null,
   familyBudget: number | null,
@@ -217,13 +219,14 @@ export function computePriceScore(
   return matchingConfig.defaultRatingWhenNoReviews;
 }
 
-// `allCandidates` is optional and, when provided, only ever feeds
-// computePriceScore's layer-2 fallback (relative rate normalization) --
-// see that function's comment for when each layer applies. Whether to pass
-// it is a per-caller decision: rankCaregiversAgainstList (family searching
-// caregivers) does, rankFamiliesAgainstList (caregiver searching families)
-// deliberately doesn't, so the two sides of the graph can have different
-// fallback behavior when no budget is declared.
+// `allCandidates` é opcional e, quando fornecido, só alimenta o fallback da
+// camada 2 do computePriceScore (normalização relativa de tarifa) -- ver o
+// comentário dessa função para quando cada camada se aplica. Passá-lo ou não
+// é uma decisão de cada chamador: rankCaregiversAgainstList (família
+// buscando cuidadores) passa, rankFamiliesAgainstList (cuidador buscando
+// famílias) deliberadamente não passa, para que os dois lados do grafo
+// possam ter comportamento de fallback diferente quando nenhum orçamento é
+// declarado.
 export function computeMatchScore(
   familyProfile: FamilyForMatching,
   caregiver: CaregiverForMatching,
@@ -274,9 +277,10 @@ export function computeMatchScore(
   );
 }
 
-// Pure, synchronous core shared by rankCaregiversForFamily (single family,
-// fetches its own data from Prisma) and buildFamilyPreferences (many
-// families, caregivers already fetched once by the caller).
+// Núcleo puro e síncrono compartilhado por rankCaregiversForFamily (uma
+// única família, busca seus próprios dados do Prisma) e
+// buildFamilyPreferences (várias famílias, cuidadores já buscados uma vez
+// pelo chamador).
 function rankCaregiversAgainstList(
   familyProfile: FamilyForMatching,
   allCaregivers: CaregiverForMatching[]
@@ -300,14 +304,15 @@ function rankCaregiversAgainstList(
   return ranked;
 }
 
-// Mirrors rankCaregiversAgainstList's role, but for the other direction of
-// the bipartite graph: pure, synchronous core shared by
-// buildCaregiverPreferences (many caregivers, ranking each against all
-// families for Gale-Shapley preference lists) and rankFamiliesForCaregiver
-// (single caregiver, fetches its own data from Prisma). Generic over F so
-// callers can pass either the minimal FamilyCandidate (Gale-Shapley only
-// needs userId back) or the richer FamilyForDisplay (search needs
-// name/city/state too) and get that same shape back on `family`.
+// Espelha o papel de rankCaregiversAgainstList, mas para a outra direção do
+// grafo bipartido: núcleo puro e síncrono compartilhado por
+// buildCaregiverPreferences (vários cuidadores, ranqueando cada um contra
+// todas as famílias para as listas de preferência do Gale-Shapley) e
+// rankFamiliesForCaregiver (um único cuidador, busca seus próprios dados do
+// Prisma). Genérica sobre F para que os chamadores possam passar tanto o
+// FamilyCandidate mínimo (Gale-Shapley só precisa do userId de volta) quanto
+// o FamilyForDisplay mais rico (a busca também precisa de name/city/state) e
+// obter essa mesma forma de volta em `family`.
 function rankFamiliesAgainstList<F extends FamilyCandidate>(
   caregiver: CaregiverForMatching,
   allFamilies: F[]
@@ -321,11 +326,12 @@ function rankFamiliesAgainstList<F extends FamilyCandidate>(
       caregiver.latitude!,
       caregiver.longitude!
     );
-    // No candidateRatesForFallback passed here on purpose -- unlike the
-    // family side (rankCaregiversAgainstList), this direction never falls
-    // back to relative rate normalization against other caregivers when a
-    // family hasn't declared a budget; it just goes neutral. See
-    // computePriceScore's comment for the full fallback order.
+    // candidateRatesForFallback deliberadamente não é passado aqui --
+    // diferente do lado família (rankCaregiversAgainstList), esta direção
+    // nunca recorre à normalização relativa de tarifa contra outros
+    // cuidadores quando uma família não declarou orçamento; simplesmente vai
+    // para o neutro. Ver o comentário de computePriceScore para a ordem
+    // completa de fallback.
     const matchScore = computeMatchScore(family, caregiver);
 
     return { family, distanceKm, matchScore };
@@ -393,9 +399,9 @@ export async function rankCaregiversForFamily(
     hourlyBudget: familyProfile.hourlyBudget
       ? Number(familyProfile.hourlyBudget)
       : null,
-    // Irrelevant to this direction (a family's own visibility never affects
-    // her own search for caregivers -- see findCandidateCaregivers), but
-    // still required by the type. Carried through faithfully anyway.
+    // Irrelevante para esta direção (a própria visibilidade de uma família
+    // nunca afeta a busca dela por cuidadores -- ver findCandidateCaregivers),
+    // mas ainda exigido pelo tipo. Carregado fielmente de qualquer forma.
     visibleToCaregivers: familyProfile.visibleToCaregivers,
   };
 
@@ -423,11 +429,11 @@ async function fetchAllFamiliesForDisplay(): Promise<FamilyForDisplay[]> {
   }));
 }
 
-// Mirrors rankCaregiversForFamily on the other side of the graph: the
-// search used by GET /api/search/families. Returns FamilyForDisplay (no
-// `address`, see that type's comment) -- a caregiver browsing families
-// never gets a family's full street address, only city/state, distance,
-// and what they're looking for.
+// Espelha rankCaregiversForFamily do outro lado do grafo: a busca usada por
+// GET /api/search/families. Retorna FamilyForDisplay (sem `address`, ver o
+// comentário desse tipo) -- um cuidador navegando por famílias nunca recebe
+// o endereço completo de uma família, só cidade/estado, distância e o que
+// ela procura.
 export async function rankFamiliesForCaregiver(
   caregiverProfile: CaregiverProfile
 ): Promise<RankedFamily<FamilyForDisplay>[]> {
@@ -453,9 +459,9 @@ export async function rankFamiliesForCaregiver(
     longitude: caregiverProfile.longitude,
     averageRating,
     reviewCount,
-    // Irrelevant to this direction (a caregiver's own visibility never
-    // affects his own search for families -- see findCandidateFamilies),
-    // but still required by the type. Carried through faithfully anyway.
+    // Irrelevante para esta direção (a própria visibilidade de um cuidador
+    // nunca afeta a busca dele por famílias -- ver findCandidateFamilies),
+    // mas ainda exigido pelo tipo. Carregado fielmente de qualquer forma.
     visibleToFamilies: caregiverProfile.visibleToFamilies,
     availabilityStatus: caregiverProfile.availabilityStatus,
   };
@@ -465,11 +471,11 @@ export async function rankFamiliesForCaregiver(
   return rankFamiliesAgainstList(caregiver, allFamilies);
 }
 
-// For each family, the caregivers eligible for them ranked by
-// computeMatchScore -- this is exactly what rankCaregiversForFamily
-// computes for one family, reused here (as a synchronous helper, since the
-// caregiver list is already fetched once for all families instead of
-// re-querying Prisma per family).
+// Para cada família, os cuidadores elegíveis para ela ranqueados por
+// computeMatchScore -- isso é exatamente o que rankCaregiversForFamily
+// calcula para uma família, reaproveitado aqui (como um helper síncrono, já
+// que a lista de cuidadores já foi buscada uma vez para todas as famílias em
+// vez de reconsultar o Prisma por família).
 export function buildFamilyPreferences(
   families: FamilyCandidate[],
   caregivers: CaregiverForMatching[]
@@ -487,20 +493,21 @@ export function buildFamilyPreferences(
   return preferences;
 }
 
-// For each caregiver, the families eligible for them ranked by the SAME
-// computeMatchScore formula, just with the roles of "which side varies"
-// swapped. Note: since the caregiver is fixed while looping over families,
-// the rating component of the score is constant across all of that
-// caregiver's candidate families (it's a property of the caregiver, not the
-// family). Price, since hourlyBudget was added, is no longer always
-// constant here: a family with a declared budget produces a real
-// budget-vs-rate comparison that varies per family, while a family without
-// one falls back to the neutral score (see computePriceScore) -- so price
-// only stays constant across candidates when none of them declared a
-// budget. Distance and care-type compatibility always vary and drive the
-// ranking regardless. That's a direct, honest consequence of reusing the
-// same edge-weight formula from both directions rather than inventing a
-// separate caregiver-side formula, exactly as specified.
+// Para cada cuidador, as famílias elegíveis para ele ranqueadas pela MESMA
+// fórmula de computeMatchScore, só com os papéis de "qual lado varia"
+// trocados. Observação: como o cuidador fica fixo enquanto se percorre as
+// famílias, o componente de rating do score é constante entre todas as
+// famílias candidatas desse cuidador (é uma propriedade do cuidador, não da
+// família). O preço, desde que hourlyBudget foi adicionado, não é mais
+// sempre constante aqui: uma família com orçamento declarado produz uma
+// comparação real orçamento-vs-tarifa que varia por família, enquanto uma
+// família sem orçamento cai no score neutro (ver computePriceScore) -- então
+// o preço só permanece constante entre os candidatos quando nenhum deles
+// declarou orçamento. Distância e compatibilidade de tipo de cuidado sempre
+// variam e conduzem o ranqueamento de qualquer forma. Essa é uma
+// consequência direta e honesta de reaproveitar a mesma fórmula de peso de
+// aresta nas duas direções em vez de inventar uma fórmula separada do lado
+// do cuidador, exatamente como especificado.
 export function buildCaregiverPreferences(
   caregivers: CaregiverForMatching[],
   families: FamilyCandidate[]
@@ -527,9 +534,9 @@ export async function runStableMatchingForAllFamilies(): Promise<
     fetchAllCaregiversForMatching(),
   ]);
 
-  // There's no "active" flag on User/FamilyProfile/CaregiverProfile in the
-  // schema today, so "active families and caregivers" is interpreted here
-  // as simply every profile that currently exists.
+  // Não existe uma flag "active" em User/FamilyProfile/CaregiverProfile no
+  // schema hoje, então "famílias e cuidadores ativos" é interpretado aqui
+  // como simplesmente todo profile que existe atualmente.
   const families: FamilyCandidate[] = familyProfiles.map((profile) => ({
     userId: profile.userId,
     latitude: profile.latitude,
@@ -551,19 +558,19 @@ export async function runStableMatchingForAllFamilies(): Promise<
   });
 }
 
-// Runs the global stable matching and picks out just the one result a
-// single family cares about -- shared by /dashboard/familia/match-recomendado
-// and the family dashboard's summary card, so the "which caregiver did I get
-// matched with" lookup only lives in one place.
+// Roda o matching estável global e extrai só o resultado que uma única
+// família tem interesse -- compartilhado por
+// /dashboard/familia/match-recomendado e pelo card de resumo do dashboard da
+// família, para que a busca "com qual cuidador eu fiquei" viva num só lugar.
 //
-// distanceKm/sharedCareTypes are display-only extras (not used by the
-// matching algorithm itself, which already ran by the time this is
-// computed) -- added so match-recomendado can show a real fact instead of a
-// fabricated "Recomendado" badge. Both are effectively guaranteed
-// non-null/non-empty for an actual stable match (isEligiblePair already
-// required non-null coordinates and overlapping care types for this pair to
-// be eligible in the first place), but typed loosely since this reads the
-// profiles fresh rather than reusing that guarantee.
+// distanceKm/sharedCareTypes são extras só para exibição (não usados pelo
+// algoritmo de matching em si, que já rodou até este ponto ser calculado) --
+// adicionados para que match-recomendado possa mostrar um fato real em vez
+// de um badge "Recomendado" fabricado. Os dois são efetivamente garantidos
+// non-null/non-vazio para um match estável real (isEligiblePair já exigia
+// coordenadas non-null e tipos de cuidado sobrepostos para esse par ser
+// elegível), mas tipados de forma frouxa já que isso busca os profiles de
+// novo em vez de reaproveitar essa garantia.
 export type MatchedCaregiverForFamily = {
   caregiverUserId: string;
   distanceKm: number | null;
@@ -613,12 +620,13 @@ export async function findMatchedCaregiverForFamily(
   return { caregiverUserId: matchedCaregiverUserId, distanceKm, sharedCareTypes };
 }
 
-// Privacy-limited shape for a family matched to a caregiver via stable
-// matching -- same field set as GET /api/search/families (no `address`,
-// see FamilyForDisplay), but without a 0-1 `matchScore` since Gale-Shapley
-// doesn't produce one the way the weighted search does (same reasoning as
-// the family-side stable-match route). distanceKm/sharedCareTypes are the
-// same display-only extras as MatchedCaregiverForFamily above.
+// Forma limitada por privacidade para uma família com match a um cuidador
+// via matching estável -- mesmo conjunto de campos de
+// GET /api/search/families (sem `address`, ver FamilyForDisplay), mas sem um
+// `matchScore` 0-1 já que o Gale-Shapley não produz um da forma que a busca
+// ponderada produz (mesmo raciocínio da rota stable-match do lado família).
+// distanceKm/sharedCareTypes são os mesmos extras só para exibição de
+// MatchedCaregiverForFamily acima.
 export type MatchedFamilyForCaregiver = {
   familyId: string;
   name: string | null;
@@ -629,12 +637,12 @@ export type MatchedFamilyForCaregiver = {
   sharedCareTypes: CareType[];
 };
 
-// Mirrors findMatchedCaregiverForFamily on the other side of the graph --
-// shared by GET /api/matching/stable-match/caregiver and
-// /dashboard/cuidador/match-perfeito, so the "which families did I get
-// matched with" lookup only lives in one place. Unlike the family side
-// (capacity 1), a caregiver can hold up to matchingConfig.caregiverCapacity
-// families at once, so this returns 0 to that many entries.
+// Espelha findMatchedCaregiverForFamily do outro lado do grafo --
+// compartilhada por GET /api/matching/stable-match/caregiver e
+// /dashboard/cuidador/match-perfeito, para que a busca "com quais famílias eu
+// fiquei" viva num só lugar. Diferente do lado família (capacidade 1), um
+// cuidador pode segurar até matchingConfig.caregiverCapacity famílias ao
+// mesmo tempo, então isso retorna de 0 até essa quantidade de entradas.
 export async function findMatchedFamiliesForCaregiver(
   caregiverUserId: string
 ): Promise<MatchedFamilyForCaregiver[]> {

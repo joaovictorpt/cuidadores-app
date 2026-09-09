@@ -2,14 +2,15 @@ import { CaregiverAvailability } from "@prisma/client";
 
 import { AVAILABILITY_LABELS } from "@/lib/availability";
 
-// Discreet pill, not an alert -- BUSY reuses the same border-accent/
-// bg-accent-light treatment the app already uses elsewhere to draw a little
-// extra attention (e.g. the "Solicitações" dashboard card when something is
-// pending, see app/dashboard/cuidador/page.tsx), rather than introducing a
-// new warning color the monochromatic palette doesn't have (see CLAUDE.md
-// "Sistema de design"). AVAILABLE reuses the same bg-primary-light/
-// text-primary pill as CareTypeTags/status pills elsewhere. UNAVAILABLE
-// mirrors the muted "Recebido" direction pill (lib/hire-labels.ts callers).
+// Pílula discreta, não um alerta -- BUSY reaproveita o mesmo tratamento
+// border-accent/bg-accent-light que o app já usa em outros lugares para
+// chamar um pouco mais de atenção (ex.: o card "Solicitações" do dashboard
+// quando há algo pendente, ver app/dashboard/cuidador/page.tsx), em vez de
+// introduzir uma nova cor de aviso que a paleta monocromática não tem (ver
+// CLAUDE.md "Sistema de design"). AVAILABLE reaproveita a mesma pílula
+// bg-primary-light/text-primary de CareTypeTags/pílulas de status em outros
+// lugares. UNAVAILABLE espelha a pílula apagada "Recebido" (chamadores de
+// lib/hire-labels.ts).
 const AVAILABILITY_STYLES: Record<CaregiverAvailability, string> = {
   AVAILABLE: "bg-primary-light text-primary",
   BUSY: "border border-accent/40 bg-accent-light text-accent",
